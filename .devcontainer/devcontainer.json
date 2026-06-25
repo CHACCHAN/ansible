@@ -1,0 +1,66 @@
+{
+    "name": "Ansible Dev",
+    "build": {
+        "context": ".",
+        "dockerfile": "Dockerfile"
+    },
+    "workspaceFolder": "/workspace",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "mounts": [
+        "source=latex-doc-claude-data,target=/root/.claude,type=volume",
+        "source=${localEnv:HOME}/.cline,target=/root/.cline,type=bind,consistency=cached",
+        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
+        "source=ansible-pip-cache,target=/root/.cache/pip,type=volume"
+    ],
+    "containerEnv": {
+        "ANSIBLE_HOST_KEY_CHECKING": "False",
+        "ANSIBLE_STDOUT_CALLBACK": "yaml",
+        "ANSIBLE_DEV_PRIVATE_KEY_FILE": "/root/.ssh/dev-vm-ssh",
+        "ANSIBLE_K3S_PRIVATE_KEY_FILE": "/root/.ssh/k3s-ssh"
+    },
+    "postCreateCommand": "chmod 700 /root/.ssh && chmod 600 /root/.ssh/* 2>/dev/null || true && pip install --no-cache-dir argcomplete && activate-global-python-argcomplete",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "redhat.ansible",
+                "redhat.vscode-yaml",
+                "ms-python.python",
+                "ms-python.pylint",
+                "eamodio.gitlens",
+                "mhutchie.git-graph",
+                "editorconfig.editorconfig",
+                "streetsidesoftware.code-spell-checker",
+                "gruntfuss.vscode-nginx-conf-hint",
+                "anthropic.claude-code",
+                "saoudrizwan.claude-dev",
+                "timonwong.shellcheck",
+                "foxundermoon.shell-format",
+                "ms-azuretools.vscode-docker",
+                "mikestead.dotenv"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "editor.tabSize": 2,
+                "editor.insertSpaces": true,
+                "files.trimTrailingWhitespace": true,
+                "files.insertFinalNewline": true,
+                "ansible.python.interpreterPath": "/usr/local/bin/python",
+                "ansible.validation.lint.enabled": true,
+                "yaml.schemas": {
+                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks": "/**/tasks/**/*.yml",
+                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/playbook": "/**/playbooks/**/*.yml"
+                },
+                "[yaml]": {
+                    "editor.defaultFormatter": "redhat.vscode-yaml",
+                    "editor.tabSize": 2
+                },
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.shell.linux": "/bin/bash"
+            }
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    }
+}
