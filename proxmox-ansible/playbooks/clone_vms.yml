@@ -1,0 +1,13 @@
+---
+- name: テンプレートからクローンしcloud-init/tagsを適用
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/vms.yml
+
+  tasks:
+    - name: 各VMを作成
+      ansible.builtin.include_tasks: tasks/clone_one_vm.yml
+      loop: "{{ vms }}"
+      loop_control:
+        label: "{{ item.name }}"

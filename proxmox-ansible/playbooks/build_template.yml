@@ -1,0 +1,116 @@
+---
+- name: Debian13 cloud-initテンプレート作成
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/vms.yml
+
+  tasks:
+    - name: 既存テンプレートの有無を確認
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+        status_code: [200, 500]
+      register: existing_vm
+
+    - name: 既存ならここで終了
+      ansible.builtin.meta: end_play
+      when: existing_vm.status == 200
+
+    - name: cloud imageをストレージへダウンロード(API経由、SSH不要)
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/storage/{{ dl_storage }}/download-url"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          content: import
+          filename: "{{ image_filename }}"
+          url: "{{ image_url }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+      register: dl_task
+
+    - name: ダウンロード完了待ち
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ dl_task.json.data }}/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+      register: dl_status
+      until: dl_status.json.data.status == "stopped"
+      retries: 60
+      delay: 5
+
+    - name: ダウンロード成否を確認
+      ansible.builtin.assert:
+        that: dl_status.json.data.exitstatus == "OK"
+        fail_msg: "cloud imageのダウンロードに失敗しました: {{ dl_status.json.data }}"
+
+    - name: 空のVMを作成(ディスクなし)
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          vmid: "{{ template_vmid }}"
+          name: "{{ template_name }}"
+          memory: 2048
+          cores: 2
+          cpu: host
+          scsihw: virtio-scsi-single
+          net0: "virtio,bridge=vmbr0"
+          serial0: socket
+          vga: serial0
+          ostype: l26
+        validate_certs: "{{ proxmox_validate_certs }}"
+      register: create_task
+
+    - name: VM作成完了待ち
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ create_task.json.data }}/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+      register: create_status
+      until: create_status.json.data.status == "stopped"
+      retries: 30
+      delay: 3
+
+    - name: ダウンロード済みイメージをディスクとしてインポート
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/config"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          scsi0: "{{ disk_storage }}:0,import-from={{ dl_storage }}:import/{{ image_filename }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+
+    - name: cloud-initドライブとブート順を設定
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/config"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          ide2: "{{ disk_storage }}:cloudinit"
+          boot: "order=scsi0"
+        validate_certs: "{{ proxmox_validate_certs }}"
+
+    - name: テンプレート化
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/template"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"

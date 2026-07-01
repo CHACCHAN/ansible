@@ -1,0 +1,6 @@
+group_vars/vault.yml
+*.retry
+.ansible/
+__pycache__/
+*.pyc
+.venv/
