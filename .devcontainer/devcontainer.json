@@ -14,7 +14,8 @@
     ],
     "containerEnv": {
         "ANSIBLE_HOST_KEY_CHECKING": "False",
-        "ANSIBLE_STDOUT_CALLBACK": "yaml",
+        "ANSIBLE_STDOUT_CALLBACK": "default",
+        "ANSIBLE_RESULT_FORMAT": "yaml",
         "ANSIBLE_DEV_PRIVATE_KEY_FILE": "/root/.ssh/dev-vm-ssh",
         "ANSIBLE_K3S_PRIVATE_KEY_FILE": "/root/.ssh/k3s-ssh"
     },

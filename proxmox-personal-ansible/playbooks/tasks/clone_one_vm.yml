@@ -1,7 +1,4 @@
 ---
-# clone_vms.yml から include_tasks + loop で呼ばれる、1VM分の処理
-# ループ変数 item を前提とする
-
 - name: 既にクローン済みか確認
   ansible.builtin.uri:
     url: "{{ proxmox_api_host }}/api2/json/nodes/{{ item.node }}/qemu/{{ item.vmid }}/status/current"
