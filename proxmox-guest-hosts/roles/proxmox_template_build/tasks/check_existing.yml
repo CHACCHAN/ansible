@@ -1,0 +1,37 @@
+# roles/proxmox_template_build/tasks/check_existing.yml
+---
+- name: クラスタ全体で該当VMIDが既に存在するか確認する
+  community.general.proxmox_vm_info:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    vmid: "{{ os_defaults.template_vmid }}"
+  register: proxmox_template_build_cluster_vm_info
+
+# 判定結果は3パターン:
+#   not_found        : クラスタ全体のどこにも存在しない → 指定ノードで新規構築
+#   found_on_target   : 指定ノードに既に存在する         → 何もしない
+#   found_on_other    : 別ノードに存在する               → そちらを削除して指定ノードで新規構築
+- name: 既存VMの状態を判定する
+  ansible.builtin.set_fact:
+    proxmox_template_build_existing_state: >-
+      {{
+        'not_found'
+        if (proxmox_template_build_cluster_vm_info.proxmox_vms | length == 0)
+        else ('found_on_target'
+              if (proxmox_template_build_cluster_vm_info.proxmox_vms[0].node == proxmox_node)
+              else 'found_on_other')
+      }}
+    proxmox_template_build_existing_node: >-
+      {{
+        proxmox_template_build_cluster_vm_info.proxmox_vms[0].node
+        if (proxmox_template_build_cluster_vm_info.proxmox_vms | length > 0)
+        else omit
+      }}
+
+- name: 判定結果を表示する
+  ansible.builtin.debug:
+    msg: >-
+      VMID {{ os_defaults.template_vmid }} の状態: {{ proxmox_template_build_existing_state }}
+      {{ '(既存ノード: ' + proxmox_template_build_existing_node + ')' if proxmox_template_build_existing_node is defined else '' }}

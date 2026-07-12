@@ -1,0 +1,32 @@
+# roles/proxmox_template_build/tasks/main.yml
+#
+# 各処理を役割ごとにファイル分割している:
+#   validate.yml                      : 必須変数の検証
+#   download_image.yml                : cloud imageのダウンロード
+#   check_existing.yml                : クラスタ全体でのVMID存在確認・状態判定
+#   remove_existing_on_other_node.yml : 別ノードに存在する場合、そちらを削除する
+#   build_template.yml                : 指定ノードに存在しない場合、新規構築する
+#
+# 状態ごとの挙動:
+#   not_found        : 指定ノードで新規構築する
+#   found_on_target   : 既に指定ノードに存在するので何もしない
+#   found_on_other    : 別ノード上の既存テンプレートを削除し、指定ノードで新規構築する
+---
+- name: 必須変数を検証する
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Cloud imageをダウンロードする
+  ansible.builtin.import_tasks: download_image.yml
+
+- name: 既存VMの状態を確認する
+  ansible.builtin.import_tasks: check_existing.yml
+
+- name: 別ノードに存在する場合、そちらの既存テンプレートを削除する
+  ansible.builtin.import_tasks: remove_existing_on_other_node.yml
+  when: proxmox_template_build_existing_state == 'found_on_other'
+
+- name: 指定ノードに存在しない場合、新規にテンプレートを構築する
+  ansible.builtin.import_tasks: build_template.yml
+  when: >-
+    proxmox_template_build_existing_state == 'not_found' or
+    proxmox_template_build_existing_state == 'found_on_other'

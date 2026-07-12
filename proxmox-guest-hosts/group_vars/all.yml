@@ -1,0 +1,17 @@
+# group_vars/all.yml
+---
+# --- Proxmox API接続情報 ---
+proxmox_api_host: "https://192.168.10.11:8006"
+
+# .env の ANSIBLE_PROXMOX_GUEST_API_TOKEN (形式: USER@REALM!TOKENID=UUID) を分解する
+proxmox_api_token_raw: "{{ lookup('env', 'ANSIBLE_PROXMOX_GUEST_API_TOKEN') }}"
+proxmox_api_user: "{{ proxmox_api_token_raw.split('!')[0] }}"
+proxmox_api_token_id: "{{ proxmox_api_token_raw.split('!')[1].split('=')[0] }}"
+proxmox_api_token_secret: "{{ proxmox_api_token_raw.split('=')[1] }}"
+
+# --- ストレージ ---
+# local-lvm は各ノードローカル(クラスタ共有ではない)
+proxmox_storage: "local-lvm"
+
+# --- cloud imageのダウンロードキャッシュ先(Proxmoxノード上のパス) ---
+proxmox_image_cache_dir: "/var/lib/vz/template/iso"

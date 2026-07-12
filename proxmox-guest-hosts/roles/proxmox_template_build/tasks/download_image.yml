@@ -1,0 +1,40 @@
+# roles/proxmox_template_build/tasks/download_image.yml
+---
+- name: イメージキャッシュディレクトリが存在することを確認する
+  ansible.builtin.file:
+    path: "{{ proxmox_image_cache_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ proxmox_node }}"
+
+- name: チェックサムファイルを取得する
+  ansible.builtin.uri:
+    url: "{{ os_defaults.cloud_image_checksum_url }}"
+    return_content: true
+  register: proxmox_template_build_checksum_file
+
+- name: 対象イメージのチェックサムを抽出する
+  ansible.builtin.set_fact:
+    proxmox_template_build_expected_checksum: >-
+      {{ proxmox_template_build_checksum_file.content
+      | regex_search('([a-f0-9]{128})\s+\*?' + os_defaults.cloud_image_filename, '\1') }}
+
+- name: チェックサムが取得できなかった場合は早期に失敗させる
+  ansible.builtin.assert:
+    that:
+      - proxmox_template_build_expected_checksum is not none
+      - proxmox_template_build_expected_checksum | length == 128
+    fail_msg: >-
+      {{ os_defaults.cloud_image_checksum_url }} 内に
+      {{ os_defaults.cloud_image_filename }} のチェックサムが見つかりませんでした。
+      チェックサムファイルのフォーマットが変わっている可能性があります。
+    quiet: true
+
+- name: Cloud imageをダウンロードする(既存ファイルとチェックサムが一致する場合はスキップ)
+  ansible.builtin.get_url:
+    url: "{{ os_defaults.cloud_image_url }}"
+    dest: "{{ proxmox_image_cache_dir }}/{{ os_defaults.cloud_image_filename }}"
+    checksum: "sha512:{{ proxmox_template_build_expected_checksum }}"
+    mode: "0644"
+  delegate_to: "{{ proxmox_node }}"
+  register: proxmox_template_build_image_download

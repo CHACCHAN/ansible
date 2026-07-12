@@ -22,6 +22,7 @@
         "ANSIBLE_STDOUT_CALLBACK": "default",
         "ANSIBLE_RESULT_FORMAT": "yaml"
     },
+    "initializeCommand": "mkdir -p ${localWorkspaceFolder}/.ansible ${localWorkspaceFolder}/.cache/pip",
     "postCreateCommand": "bash .devcontainer/postCreate.sh",
     "customizations": {
         "vscode": {
@@ -40,7 +41,8 @@
                 "timonwong.shellcheck",
                 "foxundermoon.shell-format",
                 "ms-azuretools.vscode-docker",
-                "mikestead.dotenv"
+                "mikestead.dotenv",
+                "pkief.material-icon-theme"
             ],
             "settings": {
                 "editor.formatOnSave": true,
@@ -52,14 +54,16 @@
                 "ansible.validation.lint.enabled": true,
                 "yaml.schemas": {
                     "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks": [
+                        "proxmox-guest-hosts/**/tasks/**/*.yml",
+                        "proxmox-guest-vms/**/tasks/**/*.yml",
                         "proxmox-guest/**/tasks/**/*.yml",
-                        "proxmox-personal/**/tasks/**/*.yml",
-                        "k3s/**/tasks/**/*.yml"
+                        "kubernetes/**/tasks/**/*.yml"
                     ],
                     "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/playbook": [
+                        "proxmox-guest-hosts/**/playbooks/**/*.yml",
+                        "proxmox-guest-vms/**/playbooks/**/*.yml",
                         "proxmox-guest/**/playbooks/**/*.yml",
-                        "proxmox-personal/**/playbooks/**/*.yml",
-                        "k3s/**/playbooks/**/*.yml"
+                        "kubernetes/**/playbooks/**/*.yml"
                     ]
                 },
                 "[yaml]": {
@@ -68,7 +72,22 @@
                 },
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "terminal.integrated.defaultProfile.linux": "bash",
-                "terminal.integrated.shell.linux": "/bin/bash"
+                "terminal.integrated.shell.linux": "/bin/bash",
+                "workbench.iconTheme": "material-icon-theme",
+                "explorer.compactFolders": false,
+                "material-icon-theme.folders.associations": {
+                    "proxmox-guest-hosts": "kubernetes",
+                    "proxmox-guest-vms": "kubernetes",
+                    "proxmox-guest": "project",
+                    "proxmox-personal": "project",
+                    "kubernetes": "kubernetes",
+                    "roles": "components",
+                    "playbooks": "pipe",
+                    "group_vars": "constant",
+                    "host_vars": "constant",
+                    "inventory": "database",
+                    "vault": "keys"
+                }
             }
         }
     }

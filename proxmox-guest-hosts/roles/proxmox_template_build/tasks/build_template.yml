@@ -1,0 +1,70 @@
+# roles/proxmox_template_build/tasks/build_template.yml
+---
+- name: 空のVM(テンプレートの器)を作成する
+  community.general.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ os_defaults.template_vmid }}"
+    name: "{{ os_defaults.template_name }}"
+    memory: 2048
+    cores: 2
+    net:
+      net0: "virtio,bridge=vmbr0"
+    scsihw: virtio-scsi-pci
+    ostype: l26
+    state: present
+
+- name: Cloud imageをVMのディスクとしてインポートする
+  ansible.builtin.command:
+    cmd: >-
+      qm importdisk {{ os_defaults.template_vmid }}
+      {{ proxmox_image_cache_dir }}/{{ os_defaults.cloud_image_filename }}
+      {{ proxmox_storage }}
+  delegate_to: "{{ proxmox_node }}"
+  register: proxmox_template_build_importdisk
+  changed_when: >-
+    'transferred' in proxmox_template_build_importdisk.stdout or
+    'successfully imported' in proxmox_template_build_importdisk.stdout
+
+- name: インポートしたディスクをscsi0としてVMにアタッチする
+  community.general.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ os_defaults.template_vmid }}"
+    scsi0: "{{ proxmox_storage }}:vm-{{ os_defaults.template_vmid }}-disk-0"
+    state: present
+
+- name: Cloud-init用ドライブを追加する
+  ansible.builtin.command:
+    cmd: >-
+      qm set {{ os_defaults.template_vmid }}
+      --ide2 {{ proxmox_storage }}:cloudinit
+  delegate_to: "{{ proxmox_node }}"
+  changed_when: false
+
+- name: ブートディスクの順序を設定する
+  ansible.builtin.command:
+    cmd: "qm set {{ os_defaults.template_vmid }} --boot c --bootdisk scsi0"
+  delegate_to: "{{ proxmox_node }}"
+  changed_when: false
+
+- name: シリアルコンソールを追加する(ヘッドレスVM向け)
+  ansible.builtin.command:
+    cmd: "qm set {{ os_defaults.template_vmid }} --serial0 socket --vga serial0"
+  delegate_to: "{{ proxmox_node }}"
+  changed_when: false
+
+- name: VMをテンプレート化する
+  ansible.builtin.command:
+    cmd: "qm template {{ os_defaults.template_vmid }}"
+  delegate_to: "{{ proxmox_node }}"
+  register: proxmox_template_build_vm_template
+  changed_when: >-
+    proxmox_template_build_vm_template.rc == 0 and
+    'already a template' not in proxmox_template_build_vm_template.stdout

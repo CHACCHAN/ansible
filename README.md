@@ -25,6 +25,37 @@
 - Pythonパッケージを追加: `.devcontainer/requirements.txt` に追記 → コンテナを Rebuild
 - Ansible collectionを追加: `.devcontainer/requirements.yml` に追記 → コンテナを Rebuild
 
+## Claude Code / Cline を使わない場合
+
+`devcontainer.json` の `mounts` には、デフォルトで Claude Code (`~/.claude`) と Cline (`~/.cline`) のマウント設定が**有効な状態で含まれています**。
+
+- `initializeCommand` がコンテナ起動前に `~/.claude`, `~/.cline` を(無ければ)自動作成するため、これらのツールを導入していない環境でもエラーでコンテナ起動が止まることはありません
+- 使わない場合、単に中身が空のディレクトリがコンテナ内にマウントされるだけで実害はありません
+
+それでも自分の環境に不要なマウントを残したくない場合は、`devcontainer.json` の該当行を削除(またはコメントアウト)してください。
+
+```jsonc
+"mounts": [
+    // 不要なら以下の2行を削除してください
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.cline,target=/root/.cline,type=bind,consistency=cached",
+
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
+    "source=${localWorkspaceFolder}/.cache/pip,target=/root/.cache/pip,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/.ansible,target=/root/.ansible,type=bind,consistency=cached"
+],
+```
+
+削除する場合、あわせて `initializeCommand` からも `${localEnv:HOME}/.claude ${localEnv:HOME}/.cline` の部分を削除して構いません(削除しなくても、自動作成されるだけで害はありません)。
+
+## キャッシュディレクトリについて
+
+- `.cache/pip`, `.ansible` (プロジェクトルート直下) はpip / ansible-galaxyのダウンロードキャッシュです
+- 名前付きDocker Volumeではなく、プロジェクトルート配下の通常ディレクトリへのbind mountにしています(Volumeを増やさない方針のため)
+- `initializeCommand` によりコンテナ起動前に自動で `mkdir -p` されますが、`.gitkeep` で空ディレクトリ自体もリポジトリに含めています
+  (bind mountはホスト側にディレクトリが実在しないと起動失敗するため: `docker: invalid mount config for type "bind": bind source path does not exist`)
+- 中身は `.gitignore` 対象です。不要になったら単純に `rm -rf .cache .ansible` で削除できます(次回起動時に `initializeCommand` が空ディレクトリを作り直します)
+
 ## 注意
 
 - `.env` は Git 管理対象外です(`.gitignore` 済み)。誤ってコミットしないよう注意してください

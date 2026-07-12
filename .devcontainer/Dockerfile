@@ -12,17 +12,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     less \
     vim \
-    && rm -rf /var/lib/apt/lists/*
+    locales \
+    && rm -rf /var/lib/apt/lists/* \
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen
+
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
 
 WORKDIR /tmp/build
 
+# Python Dependency
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Ansible Dependency Modules
 COPY requirements.yml .
 RUN ansible-galaxy collection install -r requirements.yml \
     && rm -rf /tmp/build
- 
+
 WORKDIR /workspace
 
 CMD ["/bin/bash"]

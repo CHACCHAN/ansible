@@ -1,0 +1,14 @@
+# group_vars/os_defaults/debian.yml
+---
+os_defaults_debian:
+  os_type: debian
+  package_manager: apt
+
+  # --- cloud image ---
+  cloud_image_url: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
+  cloud_image_checksum_url: "https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS"
+  cloud_image_filename: "debian-13-generic-amd64.qcow2"
+
+  # --- テンプレートVM ---
+  template_vmid: 9000
+  template_name: "debian13-template"
