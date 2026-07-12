@@ -1,3 +1,5 @@
+# Building a cloudinit template for Debian 13 on Proxmox
+# > ansible-playbook build_debian13_template.yml --ask-vault-pass -vv -e "node=pve01 vmid=9000"
 ---
 - name: Creating a cloud-init Template for Debian 13
   hosts: localhost
@@ -5,8 +7,15 @@
   vars_files:
     - ../group_vars/all.yml
     - ../group_vars/vault.yml
-    - ../vars/vms.yml
-    - ../vars/pve_api_defaults.yml
+  vars:
+    node: "" # Proxmox Node Name
+    vmid: "" # Template VMID
+    template_name: "debian13-cloudinit-template" # Template VM Name
+    image_url: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
+    image_filename: "debian-13-genericcloud-amd64.qcow2"
+    dl_storage: "local"
+    disk_storage: local-lvm
+
   module_defaults:
     ansible.builtin.uri: "{{ pve_uri_defaults }}"
 
@@ -14,21 +23,21 @@
     # --- RESET JOB ---
     - name: Check if an existing template is available
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/status/current"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu/{{ vmid }}/status/current"
         method: GET
         status_code: [200, 500]
       register: existing_vm
 
     - name: Delete the existing template if present
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu/{{ vmid }}"
         method: DELETE
       register: delete_task
       when: existing_vm.status == 200
 
     - name: Waiting for template deletion to complete
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ delete_task.json.data }}/status"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/tasks/{{ delete_task.json.data }}/status"
         method: GET
       register: delete_status
       until: delete_status.json.data.status == "stopped"
@@ -38,14 +47,14 @@
 
     - name: Delete the previously downloaded image if present
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/storage/{{ dl_storage }}/content/{{ dl_storage }}:import/{{ image_filename }}"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/storage/{{ dl_storage }}/content/{{ dl_storage }}:import/{{ image_filename }}"
         method: DELETE
         status_code: [200, 500]
 
     # --- BUILDING JOB ---
     - name: Download the cloud image to storage
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/storage/{{ dl_storage }}/download-url"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/storage/{{ dl_storage }}/download-url"
         method: POST
         body_format: json
         body:
@@ -56,7 +65,7 @@
 
     - name: Waiting for download to complete
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ dl_task.json.data }}/status"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/tasks/{{ dl_task.json.data }}/status"
         method: GET
       register: dl_status
       until: dl_status.json.data.status == "stopped"
@@ -70,11 +79,11 @@
 
     - name: Create an empty VM(No disk)
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu"
         method: POST
         body_format: json
         body:
-          vmid: "{{ template_vmid }}"
+          vmid: "{{ vmid }}"
           name: "{{ template_name }}"
           memory: 2048
           cores: 2
@@ -90,7 +99,7 @@
 
     - name: Waiting for VM creation to complete
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ create_task.json.data }}/status"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/tasks/{{ create_task.json.data }}/status"
         method: GET
       register: create_status
       until: create_status.json.data.status == "stopped"
@@ -99,7 +108,7 @@
 
     - name: Import a Downloaded Image as a Disk
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/config"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu/{{ vmid }}/config"
         method: POST
         body_format: json
         body:
@@ -108,7 +117,7 @@
 
     - name: Waiting for disk import to complete
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ import_task.json.data }}/status"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/tasks/{{ import_task.json.data }}/status"
         method: GET
       register: import_status
       until: import_status.json.data.status == "stopped"
@@ -118,7 +127,7 @@
 
     - name: Configure the Cloud-init drive and boot order
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/config"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu/{{ vmid }}/config"
         method: POST
         body_format: json
         body:
@@ -128,7 +137,7 @@
 
     - name: Waiting for cloud-init config to apply
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/tasks/{{ cloudinit_task.json.data }}/status"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/tasks/{{ cloudinit_task.json.data }}/status"
         method: GET
       register: cloudinit_status
       until: cloudinit_status.json.data.status == "stopped"
@@ -138,5 +147,5 @@
 
     - name: Templatization
       ansible.builtin.uri:
-        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ proxmox_node }}/qemu/{{ template_vmid }}/template"
+        url: "{{ proxmox_api_host }}/api2/json/nodes/{{ node }}/qemu/{{ vmid }}/template"
         method: POST

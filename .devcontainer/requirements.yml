@@ -1,0 +1,13 @@
+---
+collections:
+  # Proxmox VM操作(proxmox_kvm等), 汎用モジュール群
+  - name: community.general
+    version: ">=9.0.0"
+
+  # k3s / Kubernetesリソース操作
+  - name: kubernetes.core
+    version: ">=3.0.0"
+
+  # POSIX全般の補助モジュール(community.generalが依存)
+  - name: ansible.posix
+    version: ">=1.5.0"

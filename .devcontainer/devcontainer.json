@@ -1,25 +1,28 @@
 {
     "name": "Ansible Dev",
     "build": {
-        "context": ".",
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        "context": "."
     },
     "workspaceFolder": "/workspace",
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
     "mounts": [
-        "source=latex-doc-claude-data,target=/root/.claude,type=volume",
+        "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
         "source=${localEnv:HOME}/.cline,target=/root/.cline,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
-        "source=ansible-pip-cache,target=/root/.cache/pip,type=volume"
+        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind",
+        "source=${localWorkspaceFolder}/.cache/pip,target=/root/.cache/pip,type=bind,consistency=cached",
+        "source=${localWorkspaceFolder}/.ansible,target=/root/.ansible,type=bind,consistency=cached"
+    ],
+    "runArgs": [
+        "--env-file",
+        ".devcontainer/.env"
     ],
     "containerEnv": {
         "ANSIBLE_HOST_KEY_CHECKING": "False",
         "ANSIBLE_STDOUT_CALLBACK": "default",
-        "ANSIBLE_RESULT_FORMAT": "yaml",
-        "ANSIBLE_DEV_PRIVATE_KEY_FILE": "/root/.ssh/dev-vm-ssh",
-        "ANSIBLE_K3S_PRIVATE_KEY_FILE": "/root/.ssh/k3s-ssh"
+        "ANSIBLE_RESULT_FORMAT": "yaml"
     },
-    "postCreateCommand": "chmod 700 /root/.ssh && chmod 600 /root/.ssh/* 2>/dev/null || true && pip install --no-cache-dir argcomplete && activate-global-python-argcomplete",
+    "postCreateCommand": "bash .devcontainer/postCreate.sh",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -48,8 +51,16 @@
                 "ansible.python.interpreterPath": "/usr/local/bin/python",
                 "ansible.validation.lint.enabled": true,
                 "yaml.schemas": {
-                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks": "/**/tasks/**/*.yml",
-                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/playbook": "/**/playbooks/**/*.yml"
+                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks": [
+                        "proxmox-guest/**/tasks/**/*.yml",
+                        "proxmox-personal/**/tasks/**/*.yml",
+                        "k3s/**/tasks/**/*.yml"
+                    ],
+                    "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/playbook": [
+                        "proxmox-guest/**/playbooks/**/*.yml",
+                        "proxmox-personal/**/playbooks/**/*.yml",
+                        "k3s/**/playbooks/**/*.yml"
+                    ]
                 },
                 "[yaml]": {
                     "editor.defaultFormatter": "redhat.vscode-yaml",
@@ -60,8 +71,5 @@
                 "terminal.integrated.shell.linux": "/bin/bash"
             }
         }
-    },
-    "features": {
-        "ghcr.io/devcontainers/features/git:1": {}
     }
 }

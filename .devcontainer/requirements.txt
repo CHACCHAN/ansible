@@ -1,0 +1,13 @@
+# Ansible本体
+ansible
+ansible-lint
+
+# Proxmox API操作(community.general.proxmox_kvm等が内部で使用)
+proxmoxer
+requests
+
+# k3s / Kubernetes操作(kubernetes.core collectionが内部で使用)
+kubernetes
+
+# 補助
+argcomplete

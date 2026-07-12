@@ -1,27 +1,28 @@
-FROM python:3.13-alpine3.24
+FROM python:3.13-slim-trixie
 
 # Runtime tools needed for Ansible operations
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     git \
     openssh-client \
     rsync \
-    sshpass
+    sshpass \
+    ca-certificates \
+    jq \
+    less \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build dependencies are grouped as a virtual package (.build-deps) so they
-# can be removed in the same layer after pip install completes.
-# cryptography and paramiko (Ansible deps) require C compilation on Alpine/musl.
-RUN apk add --no-cache --virtual .build-deps \
-        gcc \
-        musl-dev \
-        libffi-dev \
-        openssl-dev \
-    && pip install --no-cache-dir \
-        ansible \
-        ansible-lint \
-    && apk del .build-deps
+WORKDIR /tmp/build
 
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY requirements.yml .
+RUN ansible-galaxy collection install -r requirements.yml \
+    && rm -rf /tmp/build
+ 
 WORKDIR /workspace
 
 CMD ["/bin/bash"]
