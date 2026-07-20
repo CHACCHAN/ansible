@@ -1,0 +1,32 @@
+# playbooks/build-template.yml
+# os_type には group_vars/os_defaults/ 配下のファイル名(拡張子なし)を指定する
+---
+- name: Proxmoxテンプレートを構築する
+  hosts: "{{ proxmox_node }}"
+  gather_facts: false
+
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all.yml"
+    - "{{ playbook_dir }}/../vault/secrets.yml"
+
+  pre_tasks:
+    - name: os_type変数を検証する
+      ansible.builtin.assert:
+        that:
+          - os_type is defined
+        fail_msg: >-
+          os_type が指定されていません。-e "os_type=debian" のように
+          group_vars/os_defaults/ 配下のファイル名(拡張子なし)で指定してください。
+        quiet: true
+
+    - name: group_vars/os_defaults/{{ os_type }}.yml を読み込む
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/os_defaults/{{ os_type }}.yml"
+        name: os_defaults_loaded
+
+    - name: os_defaultsを設定する
+      ansible.builtin.set_fact:
+        os_defaults: "{{ os_defaults_loaded['os_defaults_' + os_type] }}"
+
+  roles:
+    - proxmox_template_build

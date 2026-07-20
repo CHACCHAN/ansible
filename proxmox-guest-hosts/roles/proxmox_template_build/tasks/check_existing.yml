@@ -1,13 +1,20 @@
 # roles/proxmox_template_build/tasks/check_existing.yml
 ---
-- name: クラスタ全体で該当VMIDが既に存在するか確認する
-  community.general.proxmox_vm_info:
-    api_host: "{{ proxmox_api_host }}"
-    api_user: "{{ proxmox_api_user }}"
-    api_token_id: "{{ proxmox_api_token_id }}"
-    api_token_secret: "{{ proxmox_api_token_secret }}"
-    vmid: "{{ os_defaults.template_vmid }}"
+- name: クラスタ全体のVM一覧を取得する
+  ansible.builtin.command:
+    cmd: pvesh get /cluster/resources --type vm --output-format json
+  delegate_to: "{{ proxmox_node }}"
+  changed_when: false
   register: proxmox_template_build_cluster_vm_info
+
+- name: 該当VMIDのVM情報を抽出する
+  ansible.builtin.set_fact:
+    proxmox_template_build_matched_vm: >-
+      {{
+        (proxmox_template_build_cluster_vm_info.stdout | from_json)
+        | selectattr('vmid', 'equalto', os_defaults.template_vmid)
+        | list
+      }}
 
 # 判定結果は3パターン:
 #   not_found        : クラスタ全体のどこにも存在しない → 指定ノードで新規構築
@@ -18,15 +25,15 @@
     proxmox_template_build_existing_state: >-
       {{
         'not_found'
-        if (proxmox_template_build_cluster_vm_info.proxmox_vms | length == 0)
+        if (proxmox_template_build_matched_vm | length == 0)
         else ('found_on_target'
-              if (proxmox_template_build_cluster_vm_info.proxmox_vms[0].node == proxmox_node)
+              if (proxmox_template_build_matched_vm[0].node == proxmox_node)
               else 'found_on_other')
       }}
     proxmox_template_build_existing_node: >-
       {{
-        proxmox_template_build_cluster_vm_info.proxmox_vms[0].node
-        if (proxmox_template_build_cluster_vm_info.proxmox_vms | length > 0)
+        proxmox_template_build_matched_vm[0].node
+        if (proxmox_template_build_matched_vm | length > 0)
         else omit
       }}
 

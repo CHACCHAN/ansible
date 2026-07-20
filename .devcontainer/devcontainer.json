@@ -1,29 +1,28 @@
 {
     "name": "Ansible Dev",
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
     "build": {
         "dockerfile": "Dockerfile",
-        "context": "."
+        "context": ".."
     },
-    "workspaceFolder": "/workspace",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "workspaceFolder": "/${localWorkspaceFolderBasename}",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${localWorkspaceFolderBasename},type=bind,consistency=cached",
     "mounts": [
-        "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.cline,target=/root/.cline,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind",
-        "source=${localWorkspaceFolder}/.cache/pip,target=/root/.cache/pip,type=bind,consistency=cached",
-        "source=${localWorkspaceFolder}/.ansible,target=/root/.ansible,type=bind,consistency=cached"
-    ],
-    "runArgs": [
-        "--env-file",
-        ".devcontainer/.env"
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind",
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
+        "source=ansible-${localWorkspaceFolderBasename},target=/home/vscode/.ansible,type=volume"
     ],
     "containerEnv": {
         "ANSIBLE_HOST_KEY_CHECKING": "False",
         "ANSIBLE_STDOUT_CALLBACK": "default",
-        "ANSIBLE_RESULT_FORMAT": "yaml"
+        "ANSIBLE_RESULT_FORMAT": "yaml",
+        "LANG": "en_US.UTF-8",
+        "LANGUAGE": "en_US:en",
+        "LC_ALL": "en_US.UTF-8"
     },
-    "initializeCommand": "mkdir -p ${localWorkspaceFolder}/.ansible ${localWorkspaceFolder}/.cache/pip",
-    "postCreateCommand": "bash .devcontainer/postCreate.sh",
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -37,7 +36,6 @@
                 "streetsidesoftware.code-spell-checker",
                 "gruntfuss.vscode-nginx-conf-hint",
                 "anthropic.claude-code",
-                "saoudrizwan.claude-dev",
                 "timonwong.shellcheck",
                 "foxundermoon.shell-format",
                 "ms-azuretools.vscode-docker",

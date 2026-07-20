@@ -1,0 +1,15 @@
+# inventory/proxmox_nodes.yml
+---
+proxmox:
+  hosts:
+    pve01:
+      ansible_host: 192.168.10.11
+    pve02:
+      ansible_host: 192.168.10.12
+    pve03:
+      ansible_host: 192.168.10.13
+    pve04:
+      ansible_host: 192.168.10.14
+  vars:
+    ansible_user: root
+    ansible_password: "{{ vault_proxmox_ssh_password }}"

@@ -1,0 +1,16 @@
+# group_vars/os_defaults/ubuntu.yml
+---
+os_defaults_ubuntu:
+  os_type: ubuntu
+  package_manager: apt
+
+  # --- cloud image (26.04 LTS "Resolute Raccoon") ---
+  # "current" は26.04系列の最新ポイントリリースを指す(ファイル名は変わらない)
+  cloud_image_url: "https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img"
+  cloud_image_checksum_url: "https://cloud-images.ubuntu.com/resolute/current/SHA256SUMS"
+  cloud_image_checksum_algorithm: sha256
+  cloud_image_filename: "resolute-server-cloudimg-amd64.img"
+
+  # --- テンプレートVM ---
+  template_vmid: 9001
+  template_name: "ubuntu2604-template"

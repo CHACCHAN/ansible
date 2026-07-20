@@ -4,15 +4,12 @@
   ansible.builtin.assert:
     that:
       - proxmox_image_cache_dir is defined
-      - proxmox_api_host is defined
-      - proxmox_api_user is defined
-      - proxmox_api_token_id is defined
-      - proxmox_api_token_secret is defined
       - proxmox_node is defined
       - proxmox_storage is defined
       - os_defaults is defined
       - os_defaults.cloud_image_url is defined
       - os_defaults.cloud_image_checksum_url is defined
+      - os_defaults.cloud_image_checksum_algorithm is defined
       - os_defaults.cloud_image_filename is defined
       - os_defaults.template_vmid is defined
       - os_defaults.template_name is defined
