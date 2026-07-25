@@ -1,9 +1,7 @@
-# roles/proxmox_template_build/tasks/check_existing.yml
 ---
 - name: クラスタ全体のVM一覧を取得する
   ansible.builtin.command:
     cmd: pvesh get /cluster/resources --type vm --output-format json
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
   register: proxmox_template_build_cluster_vm_info
 
@@ -17,9 +15,9 @@
       }}
 
 # 判定結果は3パターン:
-#   not_found        : クラスタ全体のどこにも存在しない → 指定ノードで新規構築
-#   found_on_target   : 指定ノードに既に存在する         → 何もしない
-#   found_on_other    : 別ノードに存在する               → そちらを削除して指定ノードで新規構築
+#   not_found        : クラスタ全体のどこにも存在しない → 接続先ノードで新規構築
+#   found_on_target  : 接続先ノードに既に存在する       → 何もしない
+#   found_on_other   : 別ノードに存在する               → そちらを削除して接続先ノードで新規構築
 - name: 既存VMの状態を判定する
   ansible.builtin.set_fact:
     proxmox_template_build_existing_state: >-
@@ -27,7 +25,7 @@
         'not_found'
         if (proxmox_template_build_matched_vm | length == 0)
         else ('found_on_target'
-              if (proxmox_template_build_matched_vm[0].node == proxmox_node)
+              if (proxmox_template_build_matched_vm[0].node == proxmox_template_build_node)
               else 'found_on_other')
       }}
     proxmox_template_build_existing_node: >-

@@ -1,13 +1,27 @@
-# playbooks/build-template.yml
+# 接続先は -e "proxmox_ip=<ProxmoxホストのIP>" で直接指定する。
+# インベントリファイルは使用せず、1つ目のプレイで対象ホストを動的に登録する。
+# ノード名はプレイブック側で指定せず、接続先ホスト自身から自動取得する。
+#
 # os_type には group_vars/os_defaults/ 配下のファイル名(拡張子なし)を指定する
 ---
+- name: 接続先のProxmoxホストを登録する
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - "{{ playbook_dir }}/../vault/secrets.yml"
+
+  tasks:
+    - name: proxmoxというグループでホストを追加
+      ansible.builtin.import_tasks: ../tasks/register-proxmox-host.yml
+
 - name: Proxmoxテンプレートを構築する
-  hosts: "{{ proxmox_node }}"
+  hosts: proxmox
   gather_facts: false
 
   vars_files:
     - "{{ playbook_dir }}/../group_vars/all.yml"
-    - "{{ playbook_dir }}/../vault/secrets.yml"
 
   pre_tasks:
     - name: os_type変数を検証する

@@ -1,0 +1,33 @@
+---
+- name: 接続先のVMホストを登録する
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: SSH変数を検証する
+      ansible.builtin.assert:
+        that:
+          - vm_ip is defined
+          - (vm_ip | default('', true)) | length > 0
+          - vm_ssh_user is defined
+          - vm_ssh_prikey is defined
+        fail_msg: >-
+          vm_ssh_user、vm_ssh_prikey、またはvm_ip変数がない、または不正な値です。
+        quiet: true
+
+    - name: 構築するVMをインベントリにIPで登録する
+      ansible.builtin.add_host:
+        name: "{{ vm_ip }}"
+        groups: vms
+        ansible_user: "{{ vm_ssh_user }}"
+        ansible_ssh_private_key_file: "{{ vm_ssh_prikey }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      changed_when: false
+
+- name: 開発専用VMを構築する
+  hosts: vms
+  gather_facts: false
+
+  roles:
+    - development

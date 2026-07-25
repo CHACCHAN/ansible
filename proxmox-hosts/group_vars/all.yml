@@ -1,0 +1,2 @@
+---
+proxmox_image_cache_dir: "/var/lib/vz/import"

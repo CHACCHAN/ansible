@@ -1,17 +1,19 @@
-# roles/proxmox_template_build/tasks/download_image.yml
 ---
 - name: イメージキャッシュディレクトリが存在することを確認する
   ansible.builtin.file:
     path: "{{ proxmox_image_cache_dir }}"
     state: directory
     mode: "0755"
-  delegate_to: "{{ proxmox_node }}"
 
 - name: チェックサムファイルを取得する
   ansible.builtin.uri:
     url: "{{ os_defaults.cloud_image_checksum_url }}"
     return_content: true
+    timeout: 30
   register: proxmox_template_build_checksum_file
+  retries: 3
+  delay: 5
+  until: proxmox_template_build_checksum_file is succeeded
 
 # チェックサムファイルの形式はOSによって異なる:
 - name: ハッシュ値の文字数を算出する
@@ -51,5 +53,5 @@
     dest: "{{ proxmox_image_cache_dir }}/{{ os_defaults.cloud_image_filename }}"
     checksum: "{{ os_defaults.cloud_image_checksum_algorithm }}:{{ proxmox_template_build_expected_checksum }}"
     mode: "0644"
-  delegate_to: "{{ proxmox_node }}"
+    timeout: 300
   register: proxmox_template_build_image_download

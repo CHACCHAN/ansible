@@ -1,10 +1,8 @@
-# roles/proxmox_template_build/tasks/validate.yml
 ---
 - name: 必須変数が正しく渡されているか検証する
   ansible.builtin.assert:
     that:
       - proxmox_image_cache_dir is defined
-      - proxmox_node is defined
       - proxmox_storage is defined
       - os_defaults is defined
       - os_defaults.cloud_image_url is defined

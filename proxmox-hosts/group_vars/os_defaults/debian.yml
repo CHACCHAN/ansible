@@ -1,4 +1,3 @@
-# group_vars/os_defaults/debian.yml
 ---
 os_defaults_debian:
   os_type: debian

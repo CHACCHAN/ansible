@@ -53,15 +53,11 @@
                 "ansible.validation.lint.enabled": true,
                 "yaml.schemas": {
                     "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks": [
-                        "proxmox-guest-hosts/**/tasks/**/*.yml",
-                        "proxmox-guest-vms/**/tasks/**/*.yml",
-                        "proxmox-guest/**/tasks/**/*.yml",
+                        "proxmox/**/tasks/**/*.yml",
                         "kubernetes/**/tasks/**/*.yml"
                     ],
                     "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/playbook": [
-                        "proxmox-guest-hosts/**/playbooks/**/*.yml",
-                        "proxmox-guest-vms/**/playbooks/**/*.yml",
-                        "proxmox-guest/**/playbooks/**/*.yml",
+                        "proxmox/**/playbooks/**/*.yml",
                         "kubernetes/**/playbooks/**/*.yml"
                     ]
                 },
@@ -75,10 +71,8 @@
                 "workbench.iconTheme": "material-icon-theme",
                 "explorer.compactFolders": false,
                 "material-icon-theme.folders.associations": {
-                    "proxmox-guest-hosts": "kubernetes",
-                    "proxmox-guest-vms": "kubernetes",
-                    "proxmox-guest": "project",
-                    "proxmox-personal": "project",
+                    "proxmox-hosts": "project",
+                    "proxmox-vms": "project",
                     "kubernetes": "kubernetes",
                     "roles": "components",
                     "playbooks": "pipe",

@@ -1,8 +1,0 @@
-# group_vars/all.yml
----
-# --- ストレージ ---
-# local-lvm は各ノードローカル(クラスタ共有ではない)
-proxmox_storage: "local-lvm"
-
-# --- cloud imageのダウンロードキャッシュ先(Proxmoxノード上のパス) ---
-proxmox_image_cache_dir: "/var/lib/vz/import"

@@ -1,0 +1,25 @@
+---
+- name: 指定されたVMIDが既に存在していないかチェックする
+  ansible.builtin.command:
+    cmd: "qm status {{ vm_id }}"
+  register: proxmox_vm_build_vmid_check
+  changed_when: false
+  failed_when: false
+
+- name: VMID重複時には早期に終了させる
+  ansible.builtin.assert:
+    that:
+      - proxmox_vm_build_vmid_check.rc != 0
+    fail_msg: >-
+      VMID {{ vm_id }} は既に使用されています ({{ proxmox_vm_build_vmid_check.stdout }})。
+      別のVMIDを指定してください。
+    quiet: true
+
+- name: テンプレートからVMを構築する
+  ansible.builtin.command:
+    cmd: >-
+      qm clone {{ template_vmid }} {{ vm_id }}
+      --name {{ vm_name }} --full
+      --storage {{ target_storage }}
+  register: proxmox_vm_build_clone_result
+  changed_when: proxmox_vm_build_clone_result.rc == 0

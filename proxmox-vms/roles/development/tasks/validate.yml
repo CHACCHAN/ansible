@@ -1,0 +1,8 @@
+---
+# - name: 必須変数が正しく渡されているか検証する
+#   ansible.builtin.assert:
+#     that:
+#       - ssh_prikey is defined
+#     fail_msg: >-
+#       必須変数が不足しています。
+#     quiet: true

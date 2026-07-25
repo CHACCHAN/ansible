@@ -1,4 +1,3 @@
-# group_vars/os_defaults/ubuntu.yml
 ---
 os_defaults_ubuntu:
   os_type: ubuntu

@@ -1,4 +1,3 @@
-# roles/proxmox_template_build/tasks/build_template.yml
 ---
 - name: 空のVM(テンプレートの器)を作成する
   ansible.builtin.command:
@@ -10,7 +9,6 @@
       --net0 virtio,bridge=vmbr0
       --scsihw virtio-scsi-pci
       --ostype l26
-  delegate_to: "{{ proxmox_node }}"
   changed_when: true
 
 - name: Cloud imageをVMのディスクとしてインポートする
@@ -19,7 +17,6 @@
       qm importdisk {{ os_defaults.template_vmid }}
       {{ proxmox_image_cache_dir }}/{{ os_defaults.cloud_image_filename }}
       {{ proxmox_storage }}
-  delegate_to: "{{ proxmox_node }}"
   register: proxmox_template_build_importdisk
   changed_when: >-
     'transferred' in proxmox_template_build_importdisk.stdout or
@@ -30,7 +27,6 @@
     cmd: >-
       qm set {{ os_defaults.template_vmid }}
       --scsi0 {{ proxmox_storage }}:vm-{{ os_defaults.template_vmid }}-disk-0
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
 
 - name: Cloud-init用ドライブを追加する
@@ -38,7 +34,6 @@
     cmd: >-
       qm set {{ os_defaults.template_vmid }}
       --ide2 {{ proxmox_storage }}:cloudinit
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
 
 # 以下のCloud-init設定はすべて任意。ansible-playbook実行時に -e で
@@ -49,7 +44,6 @@
 - name: Cloud-initのデフォルトユーザーを設定する
   ansible.builtin.command:
     cmd: "qm set {{ os_defaults.template_vmid }} --ciuser {{ ssh_user }}"
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
   when: (ssh_user | default('', true)) | length > 0
 
@@ -58,7 +52,6 @@
     content: "{{ ssh_pubkey }}\n"
     dest: "/tmp/proxmox_template_build_{{ os_defaults.template_vmid }}_sshkey.pub"
     mode: "0600"
-  delegate_to: "{{ proxmox_node }}"
   when: (ssh_pubkey | default('', true)) | length > 0
 
 - name: Cloud-initのSSH公開鍵を設定する
@@ -66,7 +59,6 @@
     cmd: >-
       qm set {{ os_defaults.template_vmid }}
       --sshkey /tmp/proxmox_template_build_{{ os_defaults.template_vmid }}_sshkey.pub
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
   when: (ssh_pubkey | default('', true)) | length > 0
 
@@ -74,7 +66,6 @@
   ansible.builtin.file:
     path: "/tmp/proxmox_template_build_{{ os_defaults.template_vmid }}_sshkey.pub"
     state: absent
-  delegate_to: "{{ proxmox_node }}"
   when: (ssh_pubkey | default('', true)) | length > 0
 
 - name: Cloud-initのIPアドレス設定文字列を組み立てる
@@ -95,7 +86,6 @@
 - name: Cloud-initのIPアドレスを設定する
   ansible.builtin.command:
     cmd: "qm set {{ os_defaults.template_vmid }} --ipconfig0 {{ proxmox_template_build_ipconfig0 }}"
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
   when: >-
     (ipv4 | default('', true) | length > 0) or
@@ -104,19 +94,16 @@
 - name: ブートディスクの順序を設定する
   ansible.builtin.command:
     cmd: "qm set {{ os_defaults.template_vmid }} --boot c --bootdisk scsi0"
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
 
 - name: シリアルコンソールを追加する(ヘッドレスVM向け)
   ansible.builtin.command:
     cmd: "qm set {{ os_defaults.template_vmid }} --serial0 socket --vga serial0"
-  delegate_to: "{{ proxmox_node }}"
   changed_when: false
 
 - name: VMをテンプレート化する
   ansible.builtin.command:
     cmd: "qm template {{ os_defaults.template_vmid }}"
-  delegate_to: "{{ proxmox_node }}"
   register: proxmox_template_build_vm_template
   changed_when: >-
     proxmox_template_build_vm_template.rc == 0 and
