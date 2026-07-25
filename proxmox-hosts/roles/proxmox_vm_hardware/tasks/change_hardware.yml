@@ -1,0 +1,30 @@
+---
+- name: 引数リストの初期値(qm set + vm_id)を設定する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_argv: "{{ ['qm', 'set', vm_id | string] }}"
+
+- name: CPU関連の引数を組み立てる
+  ansible.builtin.import_tasks: build_cpu_args.yml
+
+- name: メモリ関連の引数を組み立てる
+  ansible.builtin.import_tasks: build_memory_args.yml
+
+- name: ディスク関連の引数を組み立てる
+  ansible.builtin.import_tasks: build_disk_args.yml
+
+- name: ネットワーク関連の引数を組み立てる
+  ansible.builtin.import_tasks: build_network_args.yml
+
+- name: その他オプションの引数を組み立てる
+  ansible.builtin.import_tasks: build_options_args.yml
+
+- name: 削除指定を引数に追加する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_argv: "{{ proxmox_vm_hardware_argv + ['--delete', proxmox_vm_hardware_delete | join(',')] }}"
+  when: proxmox_vm_hardware_delete | length > 0
+
+- name: ハードウェア設定を変更する
+  ansible.builtin.command:
+    argv: "{{ proxmox_vm_hardware_argv }}"
+  register: proxmox_vm_hardware_result
+  changed_when: proxmox_vm_hardware_result.rc == 0

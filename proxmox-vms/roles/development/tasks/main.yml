@@ -1,6 +1,63 @@
+# 対象OSはDebian(cloud image)を前提としています。他ディストリビューションでは動作しません。
+#
+# 各処理を役割ごとにファイル分割している:
+#   update_packages.yml                 : OS/パッケージの更新
+#   configure_timezone.yml              : タイムゾーンの設定
+#   configure_locale.yml                : ロケールの設定
+#   configure_swap.yml                  : zramによる動的swapの設定
+#   configure_admin_group.yml           : SSHユーザーをsudoグループに追加
+#   install_base_packages.yml           : git, curlのインストール
+#   configure_cockpit.yml               : cockpitのインストール・初期パスワード設定
+#   install_docker.yml                  : Docker公式インストールスクリプトによる導入
+#   configure_cockpit_dockermanager.yml : cockpit-dockermanagerプラグインの導入
+#   install_kubectl.yml                 : kubectlのインストール
+#   install_helm.yml                    : helmのインストール
+#   configure_vscode_cleanup.yml        : VSCode Server(Remote-SSH)の定期クリーンアップ
 ---
+- name: 対象OSがDebianであることを確認する
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == 'Debian'
+    fail_msg: >-
+      このロールはDebian専用です
+      (検出されたOS: {{ ansible_distribution }} {{ ansible_distribution_version }})。
+    quiet: true
+
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
-- name: 必要なパッケージ類をインストールする
-  ansible.builtin.import_tasks: download_package.yml
+- name: OS/パッケージを更新する
+  ansible.builtin.import_tasks: update_packages.yml
+
+- name: タイムゾーンを設定する
+  ansible.builtin.import_tasks: configure_timezone.yml
+
+- name: ロケールを設定する
+  ansible.builtin.import_tasks: configure_locale.yml
+
+- name: スワップ(zram)を設定する
+  ansible.builtin.import_tasks: configure_swap.yml
+
+- name: SSHユーザーを管理者グループに追加する
+  ansible.builtin.import_tasks: configure_admin_group.yml
+
+- name: 基本パッケージをインストールする
+  ansible.builtin.import_tasks: install_base_packages.yml
+
+- name: Cockpitを設定する
+  ansible.builtin.import_tasks: configure_cockpit.yml
+
+- name: Dockerをインストールする
+  ansible.builtin.import_tasks: install_docker.yml
+
+- name: Cockpit Docker Managerを設定する
+  ansible.builtin.import_tasks: configure_cockpit_dockermanager.yml
+
+- name: Kubernetes CLI(kubectl)をインストールする
+  ansible.builtin.import_tasks: install_kubectl.yml
+
+- name: Helmをインストールする
+  ansible.builtin.import_tasks: install_helm.yml
+
+- name: VSCode Serverの定期クリーンアップを設定する
+  ansible.builtin.import_tasks: configure_vscode_cleanup.yml

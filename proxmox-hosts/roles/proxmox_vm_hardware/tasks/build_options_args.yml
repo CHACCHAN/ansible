@@ -1,0 +1,16 @@
+# cpu/memory/disks/network に当てはまらない qm set オプションを
+# そのまま --オプション名 値 として引数に追加する(汎用の抜け道)。
+---
+- name: その他のオプションを引数に追加する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_argv: >-
+      {{
+        proxmox_vm_hardware_argv
+        + (proxmox_vm_hardware_options
+            | dict2items
+            | map(attribute='key')
+            | map('regex_replace', '^(.*)$', '--\1')
+            | zip(proxmox_vm_hardware_options | dict2items | map(attribute='value') | map('string'))
+            | map('list') | list | flatten)
+      }}
+  when: proxmox_vm_hardware_options | length > 0

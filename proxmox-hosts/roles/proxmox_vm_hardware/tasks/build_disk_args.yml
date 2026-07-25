@@ -1,0 +1,28 @@
+# disksの各項目を --<bus><index> <値> に変換する。
+# volumeが指定されていれば既存ボリュームとしてそのまま使用し、
+# 指定がなければ storage:size で新規ディスクを作成する。
+# bus/index/storage/size/volume 以外のキー(discard, ssd, cache, format等)は
+# qmのディスクオプションのキー名をそのまま追加のオプションとして付加する。
+---
+- name: 各ディスクを引数に追加する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_argv: >-
+      {{
+        proxmox_vm_hardware_argv
+        + ['--' + item.bus + (item.index | string),
+           (proxmox_vm_hardware_disk_base
+            + (',' + proxmox_vm_hardware_disk_extra_str if (proxmox_vm_hardware_disk_extra | length > 0) else ''))]
+      }}
+  vars:
+    proxmox_vm_hardware_disk_base: "{{ item.volume if item.volume is defined else (item.storage + ':' + (item.size | string)) }}"
+    proxmox_vm_hardware_disk_extra: "{{ item | dict2items | rejectattr('key', 'in', ['bus', 'index', 'storage', 'size', 'volume']) | items2dict }}"
+    proxmox_vm_hardware_disk_extra_str: >-
+      {{
+        proxmox_vm_hardware_disk_extra
+        | dict2items | map(attribute='key')
+        | zip(proxmox_vm_hardware_disk_extra | dict2items | map(attribute='value') | map('string'))
+        | map('join', '=') | join(',')
+      }}
+  loop: "{{ proxmox_vm_hardware_disks }}"
+  loop_control:
+    label: "{{ item.bus }}{{ item.index }}"

@@ -1,0 +1,54 @@
+# このplaybookはDebian(cloud image)のVMを対象としています。
+# 対象VMはあらかじめ起動済みである必要があります。
+# ここではVM「内部」の設定のみを行い、Proxmoxホスト側の操作
+# (VMの起動・停止・ハードウェア変更など)は一切行いません。
+# VMの構築・起動は proxmox-hosts/ 側のplaybookで行ってください。
+---
+- name: 接続先のVMホストを登録する
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: SSH変数を検証する
+      ansible.builtin.assert:
+        that:
+          - vm_ip is defined
+          - (vm_ip | default('', true)) | length > 0
+          - vm_ssh_user is defined
+          - vm_ssh_prikey is defined
+        fail_msg: >-
+          vm_ssh_user、vm_ssh_prikey、またはvm_ip変数がない、または不正な値です。
+        quiet: true
+
+    - name: 構築するVMをインベントリにIPで登録する
+      ansible.builtin.add_host:
+        name: "{{ vm_ip }}"
+        groups: vms
+        ansible_user: "{{ vm_ssh_user }}"
+        ansible_ssh_private_key_file: "{{ vm_ssh_prikey }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      changed_when: false
+
+    - name: VMが起動していることを確認する
+      block:
+        - name: SSHポート(22)の疎通を確認する
+          ansible.builtin.wait_for:
+            host: "{{ vm_ip }}"
+            port: 22
+            timeout: 10
+            state: started
+      rescue:
+        - name: VM未起動として処理を終了する
+          ansible.builtin.fail:
+            msg: >-
+              {{ vm_ip }}:22 に接続できませんでした。VMが起動していない可能性があります。
+              このplaybookはVM内部の設定のみを行い、Proxmox側の操作(VMの起動など)は
+              行いません。先にVMを起動してから再実行してください。
+
+- name: 開発専用VMを構築する
+  hosts: vms
+  gather_facts: true
+
+  roles:
+    - development

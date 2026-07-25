@@ -1,0 +1,23 @@
+# zram-tools を使い、Ubuntu同様にRAM使用率ベースの動的なswap(zram)を構成する。
+# 固定サイズのswapfileは作成しない。
+---
+- name: 動的swap用のzram-toolsパッケージをインストールする
+  ansible.builtin.apt:
+    name: zram-tools
+    state: present
+  become: true
+
+- name: "スワップ(zram)の割り当て率を設定する({{ development_zram_percent }}%)"
+  ansible.builtin.lineinfile:
+    path: /etc/default/zramswap
+    regexp: '^#?PERCENT='
+    line: "PERCENT={{ development_zram_percent }}"
+  become: true
+  notify: 設定変更に伴いzramswapサービスを再起動する
+
+- name: 動的swap(zramswap)サービスを有効化・起動する
+  ansible.builtin.systemd:
+    name: zramswap
+    enabled: true
+    state: started
+  become: true

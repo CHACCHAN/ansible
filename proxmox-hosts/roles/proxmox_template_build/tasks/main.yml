@@ -2,7 +2,7 @@
 #
 # 各処理を役割ごとにファイル分割している:
 #   validate.yml                      : 必須変数の検証
-#   detect_node.yml                   : 接続先のノード名を自動取得
+#   ../../../tasks/detect_proxmox_node.yml : 接続先のノード名を自動取得(共通タスク)
 #   download_image.yml                : cloud imageのダウンロード
 #   check_existing.yml                : クラスタ全体でのVMID存在確認・状態判定
 #   remove_existing_on_other_node.yml : 別ノードに存在する場合、そちらを削除する
@@ -17,7 +17,7 @@
   ansible.builtin.import_tasks: validate.yml
 
 - name: 接続先のノード名を取得する
-  ansible.builtin.import_tasks: detect_node.yml
+  ansible.builtin.import_tasks: ../../../tasks/detect_proxmox_node.yml
 
 - name: Cloud imageをダウンロードする
   ansible.builtin.import_tasks: download_image.yml

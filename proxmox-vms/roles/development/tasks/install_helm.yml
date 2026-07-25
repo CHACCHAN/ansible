@@ -1,0 +1,16 @@
+# 公式ドキュメント(https://helm.sh/docs/intro/install/)のget-helm-4便利
+# スクリプトを使う
+---
+- name: Helm公式インストールスクリプトを取得する
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+    dest: /tmp/get-helm-4.sh
+    mode: "0755"
+  become: true
+
+- name: Helmをインストールする
+  ansible.builtin.command:
+    cmd: /tmp/get-helm-4.sh
+  args:
+    creates: /usr/local/bin/helm
+  become: true

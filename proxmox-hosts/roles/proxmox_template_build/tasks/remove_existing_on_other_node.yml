@@ -1,4 +1,4 @@
-# 接続先ノード(proxmox_template_build_node)とは異なるノードに既にテンプレートVMが
+# 接続先ノード(proxmox_node)とは異なるノードに既にテンプレートVMが
 # 存在する場合、それを削除する。削除後は build_template.yml が接続先ノードで新規構築を行う。
 #
 # 別ノードへSSH接続はせず、Proxmox APIのプロキシ機能を利用して接続先ノードから

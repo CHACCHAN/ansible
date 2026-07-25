@@ -1,0 +1,21 @@
+# 全タスクは接続先のProxmoxホスト(-e proxmox_ip で指定)上で直接実行される。
+# 対象VMの電源がオフの場合のみ削除を許可する。
+# 誤削除防止のため、confirm_vm_id に vm_id と同じ値を指定する必要がある。
+#
+# 各処理を役割ごとにファイル分割している:
+#   validate.yml                            : 必須変数の検証・誤削除防止確認
+#   ../../../tasks/detect_proxmox_node.yml  : 接続先のノード名を自動取得(共通タスク)
+#   check_vm_exists.yml                     : VMの存在・配置ノード・電源状態を確認
+#   delete_vm.yml                           : VMを削除し、実際に消えたことを確認する
+---
+- name: 必須変数を検証する
+  ansible.builtin.import_tasks: validate.yml
+
+- name: 接続先のノード名を取得する
+  ansible.builtin.import_tasks: ../../../tasks/detect_proxmox_node.yml
+
+- name: VMの状態を確認する
+  ansible.builtin.import_tasks: check_vm_exists.yml
+
+- name: VMを削除する
+  ansible.builtin.import_tasks: delete_vm.yml

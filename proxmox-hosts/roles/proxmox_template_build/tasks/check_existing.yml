@@ -1,15 +1,12 @@
 ---
 - name: クラスタ全体のVM一覧を取得する
-  ansible.builtin.command:
-    cmd: pvesh get /cluster/resources --type vm --output-format json
-  changed_when: false
-  register: proxmox_template_build_cluster_vm_info
+  ansible.builtin.import_tasks: ../../../tasks/get_cluster_vm_info.yml
 
 - name: 該当VMIDのVM情報を抽出する
   ansible.builtin.set_fact:
     proxmox_template_build_matched_vm: >-
       {{
-        (proxmox_template_build_cluster_vm_info.stdout | from_json)
+        (proxmox_cluster_vm_info.stdout | from_json)
         | selectattr('vmid', 'equalto', os_defaults.template_vmid)
         | list
       }}
@@ -25,7 +22,7 @@
         'not_found'
         if (proxmox_template_build_matched_vm | length == 0)
         else ('found_on_target'
-              if (proxmox_template_build_matched_vm[0].node == proxmox_template_build_node)
+              if (proxmox_template_build_matched_vm[0].node == proxmox_node)
               else 'found_on_other')
       }}
     proxmox_template_build_existing_node: >-

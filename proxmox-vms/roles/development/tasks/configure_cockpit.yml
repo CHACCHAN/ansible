@@ -1,0 +1,29 @@
+# cockpitはSSH鍵認証のみのユーザーだとパスワードが無くWebコンソールに
+# ログインできないため、初期パスワードを設定する(cockpit_user_password は必須変数)。
+# パスワードはコントロールノード側でハッシュ化せず(passlib不要)、
+# 対象VM上のchpasswdにstdin経由で渡して処理する(シェル展開を避けるため)。
+---
+- name: Cockpitをインストールする
+  ansible.builtin.apt:
+    name: cockpit
+    state: present
+  become: true
+
+- name: Cockpitユーザーの既定値を設定する
+  ansible.builtin.set_fact:
+    development_cockpit_user: "{{ cockpit_user | default(vm_ssh_user) }}"
+
+- name: "初期パスワードを設定する({{ development_cockpit_user }})"
+  ansible.builtin.command:
+    cmd: chpasswd
+    stdin: "{{ development_cockpit_user }}:{{ cockpit_user_password }}"
+  become: true
+  no_log: true
+  changed_when: true
+
+- name: Cockpitサービスを有効化・起動する
+  ansible.builtin.systemd:
+    name: cockpit.socket
+    enabled: true
+    state: started
+  become: true

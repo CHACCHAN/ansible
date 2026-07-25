@@ -1,0 +1,25 @@
+# cockpit-dockermanagerは公式Debianリポジトリではなく、GPG署名なし
+# (trusted=yes)の第三者リポジトリから導入する。docker本体のインストール
+# (install_docker.yml)より後に実行し、dockerグループが存在する状態で
+# 追加すること。
+---
+- name: Dockerプラグイン(cockpit-dockermanager)のリポジトリを追加する(GPG未署名)
+  ansible.builtin.apt_repository:
+    repo: "deb [trusted=yes arch=all] https://chrisjbawden.github.io/cockpit-dockermanager stable main"
+    filename: cockpit-dockermanager
+    state: present
+  become: true
+
+- name: Cockpit Docker Managerパッケージ(dockermanager)をインストールする
+  ansible.builtin.apt:
+    name: dockermanager
+    update_cache: true
+    state: present
+  become: true
+
+- name: "Cockpit用ユーザーをdockerグループに追加する({{ development_cockpit_user }})"
+  ansible.builtin.user:
+    name: "{{ development_cockpit_user }}"
+    groups: docker
+    append: true
+  become: true

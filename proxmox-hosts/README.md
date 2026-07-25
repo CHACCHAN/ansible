@@ -4,15 +4,13 @@
 - インベントリファイルは使用しません。接続先は `proxmox_ip` にIPアドレスを直接指定します
   (ノード名は接続先ホストから自動取得されます)
 
-## 指定したノードに対してCloudInitのテンプレートを構築する
-- os_typeはgroup_vars/os_defaults/<OSタイプ>.ymlから選んでください(例: debian)
-```sh
-ansible-playbook playbooks/proxmox_template_build.yml --ask-vault-pass -vv \
--e "proxmox_ip=<ProxmoxホストのIPアドレス> proxmox_storage=<Proxmoxホストのストレージ名> \
-    os_type=<OSタイプ> ssh_user=<ユーザ名> ssh_pubkey='<公開鍵>' \
-    ipv4=<IPv4アドレス/CIDR> ipv4_gw=<IPv4アドレス> \
-    ipv6=<IPv6アドレス/CIDR> ipv6_gw=<IPv6アドレス>"
-```
-- SSHユーザは既定で `root`。変更する場合は `-e "proxmox_ssh_user=<ユーザ名>"` を追加します
-- 対象VMIDのテンプレートがクラスタ内の別ノードに存在する場合は、Proxmox API経由で
-  そちらを削除してから接続先ノードで再構築します
+## Playbook一覧
+各playbookの詳しい使い方は `docs/` 配下の同名ファイルを参照してください。
+
+| Playbook | 内容 |
+| --- | --- |
+| [proxmox_template_build.yml](docs/proxmox_template_build.md) | CloudInitテンプレートを構築する |
+| [proxmox_vm_build.yml](docs/proxmox_vm_build.md) | テンプレートからVMを構築する(複数まとめても可) |
+| [proxmox_vm_hardware.yml](docs/proxmox_vm_hardware.md) | 既存VMのハードウェア設定(CPU/メモリ/ディスク/NIC等)を変更する |
+| [proxmox_vm_powerctl.yml](docs/proxmox_vm_powerctl.md) | 既存VMの電源を操作する(起動/シャットダウン) |
+| [proxmox_vm_delete.yml](docs/proxmox_vm_delete.md) | 既存VMを削除する |

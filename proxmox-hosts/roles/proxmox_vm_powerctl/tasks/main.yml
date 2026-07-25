@@ -1,0 +1,19 @@
+# 全タスクは接続先のProxmoxホスト(-e proxmox_ip で指定)上で直接実行される。
+#
+# 各処理を役割ごとにファイル分割している:
+#   validate.yml                            : 必須変数の検証・正規化
+#   ../../../tasks/detect_proxmox_node.yml  : 接続先のノード名を自動取得(共通タスク)
+#   check_vm_exists.yml                     : VMの存在・配置ノードを確認
+#   change_power.yml                        : 電源状態を変更する(既に目的の状態なら何もしない)
+---
+- name: 必須変数を検証する
+  ansible.builtin.import_tasks: validate.yml
+
+- name: 接続先のノード名を取得する
+  ansible.builtin.import_tasks: ../../../tasks/detect_proxmox_node.yml
+
+- name: VMの存在を確認する
+  ansible.builtin.import_tasks: check_vm_exists.yml
+
+- name: 電源状態を変更する
+  ansible.builtin.import_tasks: change_power.yml

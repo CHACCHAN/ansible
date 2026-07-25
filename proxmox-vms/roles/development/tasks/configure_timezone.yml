@@ -1,0 +1,5 @@
+---
+- name: "タイムゾーンを設定する({{ development_timezone }})"
+  community.general.timezone:
+    name: "{{ development_timezone }}"
+  become: true

@@ -1,0 +1,8 @@
+---
+- name: クラスタ全体のVM一覧を取得する
+  ansible.builtin.import_tasks: ../../../tasks/get_cluster_vm_info.yml
+
+- name: 対象VMの存在・配置ノードを確認する
+  ansible.builtin.import_tasks: ../../../tasks/find_vm_on_node.yml
+  vars:
+    proxmox_target_vmid: "{{ vm_id }}"

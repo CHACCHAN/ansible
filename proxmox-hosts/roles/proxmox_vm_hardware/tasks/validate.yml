@@ -1,0 +1,87 @@
+---
+- name: 必須変数が正しく渡されているか検証する
+  ansible.builtin.assert:
+    that:
+      - vm_id is defined
+    fail_msg: >-
+      vm_id が指定されていません。
+    quiet: true
+
+# vm_hardwareはスペースを含まないJSON文字列(例: {"cpu":{"cores":4}})、
+# または辞書そのものを受け付ける
+- name: 指定されたvm_hardwareを辞書に正規化する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_normalized: >-
+      {{
+        (vm_hardware | from_yaml)
+        if (vm_hardware is defined and vm_hardware is string)
+        else (vm_hardware if (vm_hardware is defined and vm_hardware is mapping) else {})
+      }}
+
+- name: 指定されたvm_hardwareに未知のカテゴリが含まれていないか検証する
+  ansible.builtin.assert:
+    that:
+      - (proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options'])) | length == 0
+    fail_msg: >-
+      vm_hardware に未知のキーがあります:
+      {{ proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options']) | list }}
+      指定できるのは cpu, memory, disks, network, options のみです。
+    quiet: true
+
+- name: カテゴリごとに変数へ分解する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_cpu: "{{ proxmox_vm_hardware_normalized.cpu | default({}) }}"
+    proxmox_vm_hardware_memory: "{{ proxmox_vm_hardware_normalized.memory | default({}) }}"
+    proxmox_vm_hardware_disks: "{{ proxmox_vm_hardware_normalized.disks | default([]) }}"
+    proxmox_vm_hardware_network: "{{ proxmox_vm_hardware_normalized.network | default([]) }}"
+    proxmox_vm_hardware_options: "{{ proxmox_vm_hardware_normalized.options | default({}) }}"
+
+- name: 指定されたdisksの各項目が必須キーを満たしていることを検証する
+  ansible.builtin.assert:
+    that:
+      - item.bus is defined
+      - item.index is defined
+      - (item.volume is defined) or (item.storage is defined and item.size is defined)
+    fail_msg: >-
+      disks の各項目には bus, index に加えて、volume か
+      (storage と size の組み合わせ)のいずれかを指定してください: {{ item }}
+    quiet: true
+  loop: "{{ proxmox_vm_hardware_disks }}"
+  loop_control:
+    label: "{{ item.bus | default('?') }}{{ item.index | default('?') }}"
+
+- name: 指定されたnetworkの各項目が必須キーを満たしていることを検証する
+  ansible.builtin.assert:
+    that:
+      - item.index is defined
+    fail_msg: >-
+      network の各項目には index を指定してください: {{ item }}
+    quiet: true
+  loop: "{{ proxmox_vm_hardware_network }}"
+  loop_control:
+    label: "{{ item.index | default('?') }}"
+
+# vm_hardware_deleteはスペースを含まない配列文字列、またはリストそのものを受け付ける
+# (削除したいqmのプロパティ名をそのまま指定する。カテゴリ分けはしない)
+- name: 指定されたvm_hardware_deleteをリストに正規化する
+  ansible.builtin.set_fact:
+    proxmox_vm_hardware_delete: >-
+      {{
+        (vm_hardware_delete | from_yaml)
+        if (vm_hardware_delete is defined and vm_hardware_delete is string)
+        else (vm_hardware_delete if (vm_hardware_delete is defined and vm_hardware_delete is sequence and vm_hardware_delete is not string) else [])
+      }}
+
+- name: 変更内容が1つ以上指定されていることを検証する
+  ansible.builtin.assert:
+    that:
+      - (proxmox_vm_hardware_cpu | length > 0)
+        or (proxmox_vm_hardware_memory | length > 0)
+        or (proxmox_vm_hardware_disks | length > 0)
+        or (proxmox_vm_hardware_network | length > 0)
+        or (proxmox_vm_hardware_options | length > 0)
+        or (proxmox_vm_hardware_delete | length > 0)
+    fail_msg: >-
+      vm_hardware(cpu/memory/disks/network/options のいずれか)または
+      vm_hardware_delete に、1つ以上の変更内容を指定してください。
+    quiet: true

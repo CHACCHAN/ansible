@@ -1,0 +1,6 @@
+---
+- name: 設定変更に伴いzramswapサービスを再起動する
+  ansible.builtin.systemd:
+    name: zramswap
+    state: restarted
+  become: true

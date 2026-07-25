@@ -1,0 +1,10 @@
+---
+development_timezone: Asia/Tokyo
+development_locale: ja_JP.UTF-8
+# zram(圧縮メモリ上のswap)に割り当てるRAM使用率(%)。
+# 固定サイズのswapfileではなく、搭載メモリに対する割合で動的にswap容量が決まる
+development_zram_percent: 50
+# VSCode Server(Remote-SSH)の古いバージョンを何日放置したら削除するか
+development_vscode_cleanup_retention_days: 14
+# VSCode Serverクリーンアップを実行する頻度(systemdのOnCalendar書式)
+development_vscode_cleanup_schedule: weekly

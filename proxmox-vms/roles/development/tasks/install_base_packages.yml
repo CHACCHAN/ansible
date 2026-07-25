@@ -1,0 +1,8 @@
+---
+- name: 基本パッケージ(git, curl)をインストールする
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+    state: present
+  become: true

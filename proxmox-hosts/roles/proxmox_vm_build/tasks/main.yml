@@ -1,6 +1,19 @@
+# 全タスクは接続先のProxmoxホスト(-e proxmox_ip で指定)上で直接実行される。
+#
+# 各処理を役割ごとにファイル分割している:
+#   validate.yml              : 必須変数の検証
+#   ../../../tasks/detect_proxmox_node.yml : 接続先のノード名を自動取得(共通タスク)
+#   check_existing.yml        : VMID重複確認・テンプレートの存在/配置ノード確認
+#   clone_template_to_vm.yml  : テンプレートからVMを構築
 ---
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
-- name: VMIDが被っていないかチェック
+- name: 接続先のノード名を取得する
+  ansible.builtin.import_tasks: ../../../tasks/detect_proxmox_node.yml
+
+- name: 既存VMの状態を確認する
+  ansible.builtin.import_tasks: check_existing.yml
+
+- name: VMの構築
   ansible.builtin.import_tasks: clone_template_to_vm.yml

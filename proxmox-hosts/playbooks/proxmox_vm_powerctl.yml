@@ -1,0 +1,20 @@
+# このplaybookは既存VMの電源操作(起動/シャットダウン)を行います。
+---
+- name: 接続先のProxmoxホストを登録する
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - "{{ playbook_dir }}/../vault/secrets.yml"
+
+  tasks:
+    - name: proxmoxというグループでホストを追加
+      ansible.builtin.import_tasks: ../tasks/register-proxmox-host.yml
+
+- name: Proxmox VMの電源を操作する
+  hosts: proxmox
+  gather_facts: false
+
+  roles:
+    - proxmox_vm_powerctl

@@ -1,8 +1,12 @@
 ---
-# - name: 必須変数が正しく渡されているか検証する
-#   ansible.builtin.assert:
-#     that:
-#       - ssh_prikey is defined
-#     fail_msg: >-
-#       必須変数が不足しています。
-#     quiet: true
+- name: 必須変数が正しく渡されているか検証する
+  ansible.builtin.assert:
+    that:
+      - cockpit_user_password is defined
+      - (cockpit_user_password | default('', true)) | length > 0
+    fail_msg: >-
+      cockpit_user_password が指定されていません。
+      cockpitはSSH鍵認証のみのユーザーではログインできないため、
+      Webコンソール用の初期パスワードを -e "cockpit_user_password=<パスワード>" で
+      指定してください。
+    quiet: true
