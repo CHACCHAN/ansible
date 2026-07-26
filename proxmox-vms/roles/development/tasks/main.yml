@@ -7,12 +7,22 @@
 #   configure_swap.yml                  : zramによる動的swapの設定
 #   configure_admin_group.yml           : SSHユーザーをsudoグループに追加
 #   install_base_packages.yml           : git, curlのインストール
+#   install_qemu_guest_agent.yml        : QEMUゲストエージェント(GUIの有無に関わらず全VM共通)
 #   configure_cockpit.yml               : cockpitのインストール・初期パスワード設定
 #   install_docker.yml                  : Docker公式インストールスクリプトによる導入
 #   configure_cockpit_dockermanager.yml : cockpit-dockermanagerプラグインの導入
+#   configure_packagekit_network.yml    : PackageKitのオフライン誤検知の回避策
 #   install_kubectl.yml                 : kubectlのインストール
 #   install_helm.yml                    : helmのインストール
 #   configure_vscode_cleanup.yml        : VSCode Server(Remote-SSH)の定期クリーンアップ
+#
+# 以下はvm_gui_required=trueの場合のみ実行される(既定false: 一切インストールされない):
+#   install_desktop_packages.yml : XFCE/xrdpのインストール
+#   configure_xrdp.yml           : xrdpのセッション設定とサービス有効化
+#   install_browsers.yml         : Google Chrome / Firefox の導入と既定ブラウザ設定
+#
+# GUIはRDP方式です。接続先はVM自身のIPの3389番ポートで、Windowsのリモートデスクトップ
+# 接続(mstsc)等からLinuxの通常ログインパスワードで接続します。
 ---
 - name: 対象OSがDebianであることを確認する
   ansible.builtin.assert:
@@ -44,6 +54,10 @@
 - name: 基本パッケージをインストールする
   ansible.builtin.import_tasks: install_base_packages.yml
 
+# QEMUゲストエージェントはGUIの有無に関わらず全VM共通で導入する
+- name: QEMUゲストエージェントを導入する
+  ansible.builtin.import_tasks: install_qemu_guest_agent.yml
+
 - name: Cockpitを設定する
   ansible.builtin.import_tasks: configure_cockpit.yml
 
@@ -53,6 +67,9 @@
 - name: Cockpit Docker Managerを設定する
   ansible.builtin.import_tasks: configure_cockpit_dockermanager.yml
 
+- name: PackageKitのオフライン誤検知を回避する
+  ansible.builtin.import_tasks: configure_packagekit_network.yml
+
 - name: Kubernetes CLI(kubectl)をインストールする
   ansible.builtin.import_tasks: install_kubectl.yml
 
@@ -61,3 +78,15 @@
 
 - name: VSCode Serverの定期クリーンアップを設定する
   ansible.builtin.import_tasks: configure_vscode_cleanup.yml
+
+- name: デスクトップ環境・xrdp関連パッケージをインストールする
+  ansible.builtin.import_tasks: install_desktop_packages.yml
+  when: vm_gui_required | default(false) | bool
+
+- name: RDPサーバー(xrdp)を設定する
+  ansible.builtin.import_tasks: configure_xrdp.yml
+  when: vm_gui_required | default(false) | bool
+
+- name: ブラウザをインストールする
+  ansible.builtin.import_tasks: install_browsers.yml
+  when: vm_gui_required | default(false) | bool

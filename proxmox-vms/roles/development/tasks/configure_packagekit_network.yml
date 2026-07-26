@@ -1,0 +1,62 @@
+# PackageKit(Cockpitの「ソフトウェア更新」画面)が
+# 「Cannot refresh cache whilst offline」で失敗する問題の回避策。
+#
+# 【原因】Cockpit自体のバグではなく、PackageKitとNetworkManagerの既知の相互作用:
+#   - eth0はifupdown(cloud-init)管理下にあり、NetworkManagerの管理対象外
+#   - Dockerが作るdocker0はNetworkManager管理下だが、ゲートウェイを持たない
+#     ローカル接続のみ
+#   - PackageKitは自分で疎通確認をせず、NetworkManagerに「オンラインか」を問い合わせる
+#   - NetworkManagerは「自身が管理する範囲」にゲートウェイ付きの有効な接続が無いため
+#     「ローカルのみ接続」と返す(実際はeth0で正常に疎通している)
+#   - 結果としてPackageKitも「オフライン」と誤判定する
+#
+# 【対応】NetworkManager管理下にダミーの仮想インターフェースを1つ追加し、
+# 「管理下にゲートウェイ付きの有効な接続がある」と認識させてオンライン判定を引き出す。
+# このインターフェースは判定用の存在であり、実際のネットワーク通信には一切使わない。
+#
+# 【安全性】ダミー接続にはデフォルトゲートウェイを持たせる必要があるが、そのままでは
+# 実通信の経路を奪う危険がある。そのため ipv4.route-metric に非常に大きな値
+# (development_packagekit_dummy_route_metric)を設定し、カーネルが常に
+# eth0側の既定経路(metric 0)を優先するようにしている。
+# eth0のifupdown管理やdocker0の設定には一切手を加えない。
+---
+- name: NetworkManagerをインストールする
+  ansible.builtin.apt:
+    name: network-manager
+    state: present
+  become: true
+
+- name: NetworkManagerを有効化・起動する
+  ansible.builtin.systemd:
+    name: NetworkManager.service
+    enabled: true
+    state: started
+  become: true
+
+# 接続名・インターフェース名は、初見で用途が分かるよう命名している
+# (インターフェース名はカーネルの制限で15文字までのため短縮形)
+- name: PackageKitのオンライン判定用ダミー接続を作成する
+  community.general.nmcli:
+    conn_name: "{{ development_packagekit_dummy_conn_name }}"
+    ifname: "{{ development_packagekit_dummy_ifname }}"
+    type: dummy
+    ip4: "{{ development_packagekit_dummy_ip4 }}"
+    gw4: "{{ development_packagekit_dummy_gw4 }}"
+    route_metric4: "{{ development_packagekit_dummy_route_metric }}"
+    method6: disabled
+    autoconnect: true
+    state: present
+  become: true
+
+- name: ダミー接続の有効状態を確認する
+  ansible.builtin.command:
+    cmd: nmcli --terse --fields NAME connection show --active
+  register: development_packagekit_active_conn
+  changed_when: false
+
+- name: ダミー接続を有効化する
+  ansible.builtin.command:
+    cmd: nmcli connection up "{{ development_packagekit_dummy_conn_name }}"
+  become: true
+  when: development_packagekit_dummy_conn_name not in development_packagekit_active_conn.stdout_lines
+  changed_when: true

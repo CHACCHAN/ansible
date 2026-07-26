@@ -52,3 +52,14 @@
 
   roles:
     - development
+
+  # dockerグループへの追加はログインし直すまで反映されず、カーネル更新の適用にも
+  # 再起動が必要なため、構成完了後にVMを再起動する。
+  # 再起動したくない場合は -e "vm_reboot_after_setup=false" を指定する。
+  post_tasks:
+    - name: 構成を反映するためVMを再起動する
+      ansible.builtin.reboot:
+        msg: Ansibleによる構成変更を反映するため再起動します
+        reboot_timeout: 600
+      become: true
+      when: vm_reboot_after_setup | default(true) | bool

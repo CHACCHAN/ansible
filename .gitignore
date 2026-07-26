@@ -1,8 +1,9 @@
 group_vars/vault.yml
 *.retry
-.ansible/*
+.ansible
 .cache/pip/*
 __pycache__/
 *.pyc
 .venv/
 .env
+.claude

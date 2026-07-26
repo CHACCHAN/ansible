@@ -5,8 +5,12 @@
   ansible.builtin.uri:
     url: https://dl.k8s.io/release/stable.txt
     return_content: true
+    timeout: 30
   register: development_kubectl_version
   changed_when: false
+  retries: 3
+  delay: 5
+  until: development_kubectl_version is succeeded
 
 - name: チェックサム検証付きでkubectlバイナリをダウンロードする
   ansible.builtin.get_url:
@@ -16,4 +20,9 @@
     owner: root
     group: root
     mode: "0755"
+    timeout: 60
   become: true
+  register: development_kubectl_download
+  retries: 3
+  delay: 5
+  until: development_kubectl_download is succeeded

@@ -1,0 +1,44 @@
+# xrdpの設定。
+#
+# 認証はxrdpが標準で対応しているPAM経由で行われるため、Linuxの通常ユーザー名・
+# パスワード(cockpit_user_passwordで設定した初期値、または本人が変更した後の
+# パスワード)でそのままログインできる。RDP専用のパスワードや追加のPAM設定は不要。
+#
+# 【担当領域の注意】
+# Proxmoxホスト側の設定はこのロールの管轄外(proxmox-hosts/ 側で実施)。
+# RDPはVM自身のIPの3389番に直接繋ぐ方式のため、ホスト側のディスプレイタイプは
+# 既定のままでよく、RDPのために変更する必要はない。
+---
+# Debianのxrdpは /etc/ssl/private/ssl-cert-snakeoil.key を参照するが、
+# この鍵はssl-certグループにしか読めないため、xrdpユーザーを所属させる
+- name: サービス実行用のxrdpユーザーをssl-certグループに追加する
+  ansible.builtin.user:
+    name: xrdp
+    groups: ssl-cert
+    append: true
+  become: true
+  notify: 設定変更に伴いxrdpサービスを再起動する
+
+# /etc/xrdp/startwm.sh(パッケージのconffile)は変更せず、
+# その先で読まれる ~/.xsession でセッションを指定する
+- name: RDPセッションでXFCEが起動するよう.xsessionを配置する
+  ansible.builtin.template:
+    src: xsession.j2
+    dest: "/home/{{ vm_ssh_user }}/.xsession"
+    owner: "{{ vm_ssh_user }}"
+    group: "{{ vm_ssh_user }}"
+    mode: "0755"
+  become: true
+
+# ディスプレイマネージャは導入しない。xrdpはRDP接続のたびにxrdp-sesmanが
+# Xセッションを起動するため、常駐のディスプレイマネージャもgraphical.targetへの
+# 切り替えも不要(既定のmulti-user.targetのままでよい)。
+- name: RDPサーバー(xrdp)のサービスを有効化・起動する
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  become: true
+  loop:
+    - xrdp.service
+    - xrdp-sesman.service

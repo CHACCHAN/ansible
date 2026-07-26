@@ -8,3 +8,19 @@ development_zram_percent: 50
 development_vscode_cleanup_retention_days: 14
 # VSCode Serverクリーンアップを実行する頻度(systemdのOnCalendar書式)
 development_vscode_cleanup_schedule: weekly
+
+# 既定のブラウザ(vm_gui_required=trueのときのみ使用)。
+# Firefoxを既定にする場合は firefox-esr / firefox-esr.desktop を指定する
+development_default_browser_bin: /usr/bin/google-chrome-stable
+development_default_browser_desktop: google-chrome.desktop
+
+# PackageKitのオフライン誤検知を回避するためのダミー接続(実通信には使わない)。
+# 名前は初見で用途が分かるようにしてある。インターフェース名はカーネルの制限
+# (15文字まで)があるため短縮形を使う
+development_packagekit_dummy_conn_name: packagekit-online-workaround
+development_packagekit_dummy_ifname: packagekit-fix
+# 実在しないプライベートアドレス。既存ネットワークと衝突する場合は変更する
+development_packagekit_dummy_ip4: 10.99.99.1/24
+development_packagekit_dummy_gw4: 10.99.99.254
+# 実通信の既定経路(eth0側、metric 0)を絶対に奪わないよう十分大きな値にする
+development_packagekit_dummy_route_metric: 20000
