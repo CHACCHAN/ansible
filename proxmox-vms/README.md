@@ -44,17 +44,36 @@ ansible-playbook playbooks/development.yml -vv \
      ホスト側で `qm set <vmid> --agent enabled=1` が必要ですが、それは
      `proxmox-hosts/` 側の管轄です(未設定でも本ロールは失敗しません)
   9. Cockpitのインストールと初期パスワード設定
-  10. Dockerのインストール(公式スクリプト)。SSHユーザーをdockerグループに追加するため、
+  10. Cockpit Navigator(ファイルブラウザプラグイン)の導入(後述)
+  11. Dockerのインストール(公式スクリプト)。SSHユーザーをdockerグループに追加するため、
       sudoなしで`docker`コマンドが使えます
-  11. Cockpit Docker Manager(cockpit-dockermanager)プラグインの導入。
+  12. Cockpit Docker Manager(cockpit-dockermanager)プラグインの導入。
       GPG署名の無い第三者リポジトリ(`trusted=yes`)から導入するため、
       信頼できるソースかどうかは各自でご判断ください
-  12. PackageKit(Cockpitの「ソフトウェア更新」)のオフライン誤検知の回避(後述)
-  13. kubectl・Helmのインストール(いずれも公式配布物・公式インストールスクリプトを使用)
-  14. VSCode Server(Remote-SSH)の定期クリーンアップ設定。接続のたびに蓄積する
+  13. PackageKit(Cockpitの「ソフトウェア更新」)のオフライン誤検知の回避(後述)
+  14. kubectl・Helmのインストール(いずれも公式配布物・公式インストールスクリプトを使用)
+  15. VSCode Server(Remote-SSH)の定期クリーンアップ設定。接続のたびに蓄積する
       `~/.vscode-server/bin/<バージョン>` を、一定日数触られていなければsystemd timerで
       定期的に削除します。標準のCockpit(Administrative accessモードのServicesページ)で
       このtimer/serviceをそのまま確認・操作できるため、追加のCockpitプラグインは不要です
+
+### Cockpit Navigatorについて(全VM共通)
+Cockpit上でファイル操作ができるプラグイン([45Drives/cockpit-navigator](https://github.com/45Drives/cockpit-navigator))を、
+GUIの有無に関わらず導入します。Debian公式リポジトリには無く、45DrivesがGitHubのリリースで
+`.deb`を配布しているため、そこから取得します。
+
+**バージョンは固定していません。** GitHub APIでリリース一覧を取得し、`.deb`が添付されている
+最新のリリースを自動で選びます。45Drivesは`.deb`が添付されないリリース(0.5.x系の一部)も
+公開しているため、単純な「最新リリース」ではなくアセットの有無で判定しています。
+
+配布されているのは`bookworm`(Debian 12)向けビルドですが、**アーキテクチャ非依存
+(`Architecture: all`)のJavaScript/Pythonプラグイン**のためDebian 13でも動作します。
+将来`trixie`向けビルドが公開された場合は、そちらが自動的に優先されます。
+
+依存パッケージ(`cockpit`, `python3`, `rsync`, `zip`, `file`, `coreutils`, `inotify-tools`)は
+aptが自動で解決します。同じバージョンが既に入っている場合は再インストールされません。
+
+導入後、Cockpitの左メニューに「Navigator」が追加されます。
 
 ### PackageKitのオフライン誤検知への対処(全VM共通)
 Cockpitの「ソフトウェア更新」画面が `Cannot refresh cache whilst offline` で失敗するのを

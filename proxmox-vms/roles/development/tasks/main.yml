@@ -9,6 +9,7 @@
 #   install_base_packages.yml           : git, curlのインストール
 #   install_qemu_guest_agent.yml        : QEMUゲストエージェント(GUIの有無に関わらず全VM共通)
 #   configure_cockpit.yml               : cockpitのインストール・初期パスワード設定
+#   install_cockpit_navigator.yml       : Cockpit Navigator(ファイルブラウザ)の導入
 #   install_docker.yml                  : Docker公式インストールスクリプトによる導入
 #   configure_cockpit_dockermanager.yml : cockpit-dockermanagerプラグインの導入
 #   configure_packagekit_network.yml    : PackageKitのオフライン誤検知の回避策
@@ -60,6 +61,9 @@
 
 - name: Cockpitを設定する
   ansible.builtin.import_tasks: configure_cockpit.yml
+
+- name: Cockpit Navigatorをインストールする
+  ansible.builtin.import_tasks: install_cockpit_navigator.yml
 
 - name: Dockerをインストールする
   ansible.builtin.import_tasks: install_docker.yml
