@@ -1,13 +1,13 @@
-# Docker公式の便利インストールスクリプト(get.docker.com)を使う。
+# 公式インストールスクリプト(get.docker.com)で導入する。docker composeも同時に入る。
 # スクリプトは誰でも書き込める/tmpではなく/usr/local/srcに置き、実行後は残さない。
 ---
 - name: Dockerが導入済みか確認する
   ansible.builtin.stat:
     path: /usr/bin/docker
-  register: development_docker_bin
+  register: vm_docker_bin
 
 - name: Dockerをインストールする
-  when: not development_docker_bin.stat.exists
+  when: not vm_docker_bin.stat.exists
   block:
     - name: Docker公式インストールスクリプトを取得する
       ansible.builtin.get_url:
@@ -31,6 +31,14 @@
         path: /usr/local/src/get-docker.sh
         state: absent
       become: true
+
+# restart: unless-stopped のコンテナがVM再起動後に復帰する前提になる
+- name: Dockerサービスを有効化・起動する
+  ansible.builtin.systemd:
+    name: docker.service
+    enabled: true
+    state: started
+  become: true
 
 - name: "管理者権限なしでdockerコマンドを使えるようグループに追加する({{ vm_ssh_user }})"
   ansible.builtin.user:

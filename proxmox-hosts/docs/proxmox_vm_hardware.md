@@ -21,7 +21,16 @@
 | `memory` | メモリ設定(単一の辞書) | `size`(→`--memory`), `balloon`(→`--balloon`) |
 | `disks` | ディスクの追加/変更(リスト) | `bus`(`scsi`/`sata`/`ide`/`virtio`), `index`, 新規作成は`storage`+`size`、既存ボリューム参照は`volume`。他に`discard`, `ssd`, `cache`, `format`等を追加可能 |
 | `network` | NICの追加/変更(リスト) | `index`、他は`model`, `bridge`, `firewall`, `tag`, `macaddr`, `mtu`, `rate`等、qmの`net[n]`オプションのキー名をそのまま指定 |
-| `options` | 上記に当てはまらない残りすべて | `qm set`のオプション名をキーにした`{"オプション名":値}`(例: `boot`, `agent`, `bios`, `onboot`, `description`等) |
+| `options` | 上記に当てはまらない残りすべて | `qm set`のオプション名をキーにした`{"オプション名":値}`(例: `boot`, `bios`, `machine`, `vga`等) |
+| `resize` | 既存ディスクの拡張(リスト) | `bus`, `index`, `size`(GiB)。例: `[{"bus":"scsi","index":0,"size":256}]` |
+
+`disks` はディスクの**新規作成/付け替え**のため、既存ディスクに指定すると新しい空ディスクに
+置き換わり、元のディスクは未使用ボリュームとして残ります。**クローンしたVMのディスクを
+広げる場合は `resize`** を使ってください(縮小には非対応のため、現在のサイズが指定サイズ
+以上の場合は何もしません)。
+
+`agent` や `onboot` など**稼働中でも変更できる設定**は
+[proxmox_vm_options.yml](proxmox_vm_options.md) を使うと電源を落とさずに変更できます。
 
 `vm_hardware_delete` には削除したいqmのプロパティ名を `["net1","scsi2"]` のような配列文字列
 (**スペースを含めないこと**)、またはリストそのもので指定します。`vm_hardware` と同時に指定

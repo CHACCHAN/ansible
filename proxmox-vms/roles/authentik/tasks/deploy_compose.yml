@@ -1,0 +1,31 @@
+---
+- name: Compose定義(docker-compose.yml)を配置する
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ authentik_install_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  register: authentik_compose_file
+
+# docker composeは .env の変更を必ずしも再作成として扱わないため明示的に作り直す
+- name: Authentikのコンテナを起動する
+  community.docker.docker_compose_v2:
+    project_src: "{{ authentik_install_dir }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+    recreate: >-
+      {{ 'always'
+         if (authentik_compose_file is changed or authentik_env_file is changed)
+         else 'auto' }}
+  become: true
+  register: authentik_compose_up
+
+- name: 起動したコンテナを表示する
+  ansible.builtin.debug:
+    msg: >-
+      {{ authentik_compose_up.containers
+         | default([]) | map(attribute='Service', default='?') | list | join(', ') }}
+      のコンテナを起動しました({{ authentik_install_dir }})。

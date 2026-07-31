@@ -15,7 +15,6 @@
   delay: 5
   until: proxmox_template_build_checksum_file is succeeded
 
-# チェックサムファイルの形式はOSによって異なる:
 - name: ハッシュ値の文字数を算出する
   ansible.builtin.set_fact:
     proxmox_template_build_checksum_hex_len: >-
@@ -25,15 +24,31 @@
   ansible.builtin.set_fact:
     proxmox_template_build_checksum_raw: "{{ proxmox_template_build_checksum_file.content | trim }}"
 
+# チェックサムファイルの形式は配布元によって異なる:
+#   GNU形式 (Debian/Ubuntu/AlmaLinux): <ハッシュ>  <ファイル名>
+#   BSD形式 (Rocky)                  : SHA256 (<ファイル名>) = <ハッシュ>
+#   ハッシュのみ                      : <ハッシュ>
+# ファイル名の直後を行末・空白・')' に限定して別ファイル(例: <ファイル名>.zst)を弾き、
+# ハッシュを含む行だけに絞り込む(ファイル名を含むコメント行が先に来る形式があるため)。
+- name: 対象イメージのチェックサム行を抽出する
+  ansible.builtin.set_fact:
+    proxmox_template_build_checksum_line: >-
+      {{
+        (proxmox_template_build_checksum_raw
+         | regex_findall('^.*' + (os_defaults.cloud_image_filename | regex_escape) + '(?:[)\s]|$).*$', multiline=True))
+        | select('search', '[a-fA-F0-9]{' + (proxmox_template_build_checksum_hex_len | string) + '}')
+        | list | first | default('', true)
+      }}
+
 - name: 対象イメージのチェックサムを抽出する
   ansible.builtin.set_fact:
     proxmox_template_build_expected_checksum: >-
       {{
-        proxmox_template_build_checksum_raw
+        (proxmox_template_build_checksum_raw | lower)
         if (proxmox_template_build_checksum_raw | length == proxmox_template_build_checksum_hex_len | int)
-        else ((proxmox_template_build_checksum_raw
-          | regex_search('[a-f0-9]{' + (proxmox_template_build_checksum_hex_len | string) + '}\s+\*?' + os_defaults.cloud_image_filename))
-          | default('', true))[:proxmox_template_build_checksum_hex_len | int]
+        else ((proxmox_template_build_checksum_line
+          | regex_search('[a-fA-F0-9]{' + (proxmox_template_build_checksum_hex_len | string) + '}'))
+          | default('', true) | lower)
       }}
 
 - name: チェックサムが取得できなかった場合は早期に失敗させる

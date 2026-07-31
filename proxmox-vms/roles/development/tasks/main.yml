@@ -1,63 +1,33 @@
-# 対象OSはDebian(cloud image)を前提としています。他ディストリビューションでは動作しません。
-#
-# 各処理を役割ごとにファイル分割している:
-#   update_packages.yml                 : OS/パッケージの更新
-#   configure_timezone.yml              : タイムゾーンの設定
-#   configure_locale.yml                : ロケールの設定
-#   configure_swap.yml                  : zramによる動的swapの設定
-#   configure_admin_group.yml           : SSHユーザーをsudoグループに追加
-#   install_base_packages.yml           : git, curlのインストール
-#   install_qemu_guest_agent.yml        : QEMUゲストエージェント(GUIの有無に関わらず全VM共通)
-#   configure_cockpit.yml               : cockpitのインストール・初期パスワード設定
-#   install_cockpit_navigator.yml       : Cockpit Navigator(ファイルブラウザ)の導入
-#   install_docker.yml                  : Docker公式インストールスクリプトによる導入
-#   configure_cockpit_dockermanager.yml : cockpit-dockermanagerプラグインの導入
-#   configure_packagekit_network.yml    : PackageKitのオフライン誤検知の回避策
-#   install_kubectl.yml                 : kubectlのインストール
-#   install_helm.yml                    : helmのインストール
-#   configure_vscode_cleanup.yml        : VSCode Server(Remote-SSH)の定期クリーンアップ
-#
-# 以下はvm_gui_required=trueの場合のみ実行される(既定false: 一切インストールされない):
-#   install_desktop_packages.yml : XFCE/xrdpのインストール
-#   configure_xrdp.yml           : xrdpのセッション設定とサービス有効化
-#   install_browsers.yml         : Google Chrome / Firefox の導入と既定ブラウザ設定
-#
-# GUIはRDP方式です。接続先はVM自身のIPの3389番ポートで、Windowsのリモートデスクトップ
-# 接続(mstsc)等からLinuxの通常ログインパスワードで接続します。
+# 開発専用VMを構築する。Debian専用。
+# 全VM共通の処理は proxmox-vms/tasks/ 配下(= ../../../tasks/)と共有している。
+# vm_gui_required=true のときだけ末尾のGUI関連3つが実行される(既定falseでは入らない)。
 ---
-- name: 対象OSがDebianであることを確認する
-  ansible.builtin.assert:
-    that:
-      - ansible_distribution == 'Debian'
-    fail_msg: >-
-      このロールはDebian専用です
-      (検出されたOS: {{ ansible_distribution }} {{ ansible_distribution_version }})。
-    quiet: true
+- name: 対象OSを確認する
+  ansible.builtin.import_tasks: ../../../tasks/assert_debian.yml
 
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
 - name: OS/パッケージを更新する
-  ansible.builtin.import_tasks: update_packages.yml
+  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
 
 - name: タイムゾーンを設定する
-  ansible.builtin.import_tasks: configure_timezone.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
 
 - name: ロケールを設定する
-  ansible.builtin.import_tasks: configure_locale.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
 
 - name: スワップ(zram)を設定する
-  ansible.builtin.import_tasks: configure_swap.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
 
 - name: SSHユーザーを管理者グループに追加する
-  ansible.builtin.import_tasks: configure_admin_group.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
 
 - name: 基本パッケージをインストールする
-  ansible.builtin.import_tasks: install_base_packages.yml
+  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
 
-# QEMUゲストエージェントはGUIの有無に関わらず全VM共通で導入する
 - name: QEMUゲストエージェントを導入する
-  ansible.builtin.import_tasks: install_qemu_guest_agent.yml
+  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
 
 - name: Cockpitを設定する
   ansible.builtin.import_tasks: configure_cockpit.yml
@@ -65,8 +35,11 @@
 - name: Cockpit Navigatorをインストールする
   ansible.builtin.import_tasks: install_cockpit_navigator.yml
 
+- name: Cockpit Machinesをインストールする
+  ansible.builtin.import_tasks: install_cockpit_machines.yml
+
 - name: Dockerをインストールする
-  ansible.builtin.import_tasks: install_docker.yml
+  ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
 
 - name: Cockpit Docker Managerを設定する
   ansible.builtin.import_tasks: configure_cockpit_dockermanager.yml

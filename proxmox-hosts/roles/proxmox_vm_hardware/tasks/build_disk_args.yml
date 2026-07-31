@@ -1,8 +1,6 @@
 # disksの各項目を --<bus><index> <値> に変換する。
-# volumeが指定されていれば既存ボリュームとしてそのまま使用し、
-# 指定がなければ storage:size で新規ディスクを作成する。
-# bus/index/storage/size/volume 以外のキー(discard, ssd, cache, format等)は
-# qmのディスクオプションのキー名をそのまま追加のオプションとして付加する。
+# volume指定があれば既存ボリュームをそのまま使い、無ければ storage:size で新規作成する。
+# bus/index/storage/size/volume 以外のキーはqmのディスクオプションとしてそのまま付加する。
 ---
 - name: 各ディスクを引数に追加する
   ansible.builtin.set_fact:

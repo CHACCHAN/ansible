@@ -1,24 +1,13 @@
-# PackageKit(Cockpitの「ソフトウェア更新」画面)が
-# 「Cannot refresh cache whilst offline」で失敗する問題の回避策。
+# PackageKit(Cockpitの「ソフトウェア更新」)が「Cannot refresh cache whilst offline」で
+# 失敗する問題の回避策。
 #
-# 【原因】Cockpit自体のバグではなく、PackageKitとNetworkManagerの既知の相互作用:
-#   - eth0はifupdown(cloud-init)管理下にあり、NetworkManagerの管理対象外
-#   - Dockerが作るdocker0はNetworkManager管理下だが、ゲートウェイを持たない
-#     ローカル接続のみ
-#   - PackageKitは自分で疎通確認をせず、NetworkManagerに「オンラインか」を問い合わせる
-#   - NetworkManagerは「自身が管理する範囲」にゲートウェイ付きの有効な接続が無いため
-#     「ローカルのみ接続」と返す(実際はeth0で正常に疎通している)
-#   - 結果としてPackageKitも「オフライン」と誤判定する
+# 原因: PackageKitは自分で疎通確認をせずNetworkManagerに問い合わせるだけだが、
+# eth0はifupdown(cloud-init)管理で対象外、docker0はゲートウェイを持たないため、
+# NetworkManagerが「ローカルのみ接続」と返してオフラインと誤判定される。
 #
-# 【対応】NetworkManager管理下にダミーの仮想インターフェースを1つ追加し、
-# 「管理下にゲートウェイ付きの有効な接続がある」と認識させてオンライン判定を引き出す。
-# このインターフェースは判定用の存在であり、実際のネットワーク通信には一切使わない。
-#
-# 【安全性】ダミー接続にはデフォルトゲートウェイを持たせる必要があるが、そのままでは
-# 実通信の経路を奪う危険がある。そのため ipv4.route-metric に非常に大きな値
-# (development_packagekit_dummy_route_metric)を設定し、カーネルが常に
-# eth0側の既定経路(metric 0)を優先するようにしている。
-# eth0のifupdown管理やdocker0の設定には一切手を加えない。
+# 対応: 管理下にダミーの仮想インターフェースを1つ追加してオンライン判定を引き出す。
+# 判定用の存在で実通信には使わない。経路を奪わないよう ipv4.route-metric に
+# 非常に大きな値を設定し、eth0側の既定経路(metric 0)を常に優先させる。
 ---
 - name: NetworkManagerをインストールする
   ansible.builtin.apt:
@@ -33,8 +22,6 @@
     state: started
   become: true
 
-# 接続名・インターフェース名は、初見で用途が分かるよう命名している
-# (インターフェース名はカーネルの制限で15文字までのため短縮形)
 - name: PackageKitのオンライン判定用ダミー接続を作成する
   community.general.nmcli:
     conn_name: "{{ development_packagekit_dummy_conn_name }}"

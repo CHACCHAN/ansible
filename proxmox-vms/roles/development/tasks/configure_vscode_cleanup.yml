@@ -1,10 +1,6 @@
-# VSCode Remote-SSHは接続のたびに ~/.vscode-server/bin/<コミットハッシュ> 配下へ
-# バージョンごとのサーバーを展開するが、古いバージョンは自動削除されず
-# ディスクを圧迫し続ける。systemd timerで定期的に掃除する。
-#
-# 標準のCockpit(cockpit-system)はAdministrative accessモードのServicesページで
-# systemdのtimer/serviceをそのまま表示・作成・操作できるため、これとは別に
-# Cockpit側のプラグインを追加する必要はない。
+# VSCode Remote-SSHは接続のたびに ~/.vscode-server/bin/<コミットハッシュ> を展開するが、
+# 古い版は自動削除されずディスクを圧迫するため、systemd timerで定期的に掃除する。
+# 標準のCockpitのServicesページからそのまま操作できるので追加プラグインは不要。
 ---
 - name: VSCode Serverクリーンアップスクリプトを配置する
   ansible.builtin.template:

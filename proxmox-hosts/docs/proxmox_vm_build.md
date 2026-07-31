@@ -2,7 +2,9 @@
 指定したノードにテンプレートからVMを構築します。
 
 - 事前に `proxmox_template_build.yml` でテンプレートを構築しておいてください
-- `template_vmid` にはテンプレート構築時のVMID(`group_vars/os_defaults/<OSタイプ>.yml` の `template_vmid`)を指定します
+- `template_vmid` にはテンプレート構築時のVMID
+  (`group_vars/os_defaults/<OSタイプ>.yml` の `versions.<バージョン>.template_vmid`。
+  一覧は [proxmox_template_build.md](proxmox_template_build.md) を参照)を指定します
 
 ```sh
 ansible-playbook playbooks/proxmox_vm_build.yml --ask-vault-pass -vv \

@@ -1,18 +1,10 @@
-# Cockpit Navigator(Cockpit上のファイルブラウザ)を導入する。
+# Debian公式リポジトリに無いため、45DrivesのGitHubリリースから.debを取得する
+# (45Drivesのaptリポジトリ repo.45drives.com はDebian 13を想定していないため使わない)。
 #
-# Debian公式リポジトリには無く、45DrivesがGitHubのリリースで.debを配布している。
-# 45Drivesのaptリポジトリ(repo.45drives.com)はDebian 13を想定していないため使わず、
-# GitHubのリリースから直接取得する。
-#
-# 「できるだけ最新版」を追従するため、バージョンを固定せずGitHub APIから
-# リリース一覧を取得し、.debが添付された最新のものを選ぶ。
-# (0.5.x系には.debが添付されないリリースが混在するため、単純なlatest取得ではなく
-#  アセットの有無で判定している)
-#
-# パッケージはアーキテクチャ非依存(Architecture: all)のJavaScript/Pythonの
-# プラグインなので、trixie向けビルドが無い場合はbookworm向けでそのまま動作する。
-# 依存(cockpit, python3, rsync, zip, file, coreutils, inotify-tools)は
-# aptモジュールの deb: が自動解決する。
+# バージョンは固定しない。0.5.x系には.debが添付されないリリースが混在するため、
+# 単純なlatest取得ではなくアセットの有無で判定する。
+# パッケージはアーキテクチャ非依存(Architecture: all)なので、trixie向けビルドが
+# 無ければbookworm向けでそのまま動作する。
 ---
 - name: Cockpit Navigatorのリリース一覧を取得する
   ansible.builtin.uri:

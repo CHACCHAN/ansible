@@ -1,0 +1,14 @@
+# cloud-init設定は稼働中でも変更できるため、電源オフは必須にしない。
+# ここでは存在・配置ノードの確認と、電源状態の記録だけを行う。
+---
+- name: クラスタ全体のVM一覧を取得する
+  ansible.builtin.import_tasks: ../../../tasks/get_cluster_vm_info.yml
+
+- name: 対象VMの存在・配置ノードを確認する
+  ansible.builtin.import_tasks: ../../../tasks/find_vm_on_node.yml
+  vars:
+    proxmox_target_vmid: "{{ vm_id }}"
+
+- name: 対象VMの電源状態を記録する
+  ansible.builtin.set_fact:
+    proxmox_vm_cloudinit_vm_status: "{{ proxmox_target_vm_info[0].status }}"

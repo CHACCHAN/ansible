@@ -1,8 +1,6 @@
-# 接続先は -e "proxmox_ip=<ProxmoxホストのIP>" で直接指定する。
-# インベントリファイルは使用せず、1つ目のプレイで対象ホストを動的に登録する。
-# ノード名はプレイブック側で指定せず、接続先ホスト自身から自動取得する。
-#
-# os_type には group_vars/os_defaults/ 配下のファイル名(拡張子なし)を指定する
+# 接続先は -e "proxmox_ip=<ProxmoxホストのIP>" で指定する(ノード名は自動取得)。
+# os_type は group_vars/os_defaults/ 配下のファイル名(拡張子なし)、
+# os_version は対応バージョン(省略時は各OSの default_version)。
 ---
 - name: 接続先のProxmoxホストを登録する
   hosts: localhost
@@ -13,7 +11,7 @@
     - "{{ playbook_dir }}/../vault/secrets.yml"
 
   tasks:
-    - name: proxmoxというグループでホストを追加
+    - name: Proxmoxというグループでホストを追加
       ansible.builtin.import_tasks: ../tasks/register-proxmox-host.yml
 
 - name: Proxmoxテンプレートを構築する
@@ -24,23 +22,8 @@
     - "{{ playbook_dir }}/../group_vars/all.yml"
 
   pre_tasks:
-    - name: os_type変数を検証する
-      ansible.builtin.assert:
-        that:
-          - os_type is defined
-        fail_msg: >-
-          os_type が指定されていません。-e "os_type=debian" のように
-          group_vars/os_defaults/ 配下のファイル名(拡張子なし)で指定してください。
-        quiet: true
-
-    - name: group_vars/os_defaults/{{ os_type }}.yml を読み込む
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../group_vars/os_defaults/{{ os_type }}.yml"
-        name: os_defaults_loaded
-
-    - name: os_defaultsを設定する
-      ansible.builtin.set_fact:
-        os_defaults: "{{ os_defaults_loaded['os_defaults_' + os_type] }}"
+    - name: OS種別とバージョンを検証してos_defaultsを組み立てる
+      ansible.builtin.import_tasks: ../tasks/load_os_defaults.yml
 
   roles:
     - proxmox_template_build

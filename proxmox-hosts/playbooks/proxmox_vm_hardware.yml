@@ -10,7 +10,7 @@
     - "{{ playbook_dir }}/../vault/secrets.yml"
 
   tasks:
-    - name: proxmoxというグループでホストを追加
+    - name: Proxmoxというグループでホストを追加
       ansible.builtin.import_tasks: ../tasks/register-proxmox-host.yml
 
 - name: Proxmox VMのハードウェア設定を変更する

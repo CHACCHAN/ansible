@@ -1,9 +1,6 @@
-# 接続先ノード(proxmox_node)とは異なるノードに既にテンプレートVMが
-# 存在する場合、それを削除する。削除後は build_template.yml が接続先ノードで新規構築を行う。
-#
-# 別ノードへSSH接続はせず、Proxmox APIのプロキシ機能を利用して接続先ノードから
-# pvesh 経由で操作する(そのためインベントリに他ノードの情報を持つ必要がない)。
-# pvesh delete は非同期タスクを起動して即座に戻るため、実際に消えるまでポーリングする。
+# 接続先とは別のノードにテンプレートVMがある場合に削除する(この後 build_template.yml が
+# 接続先ノードで新規構築する)。別ノードへSSHせず、Proxmox APIのプロキシ機能で
+# pvesh 経由で操作する。pvesh delete は非同期のため実際に消えるまでポーリングする。
 ---
 - name: "既存テンプレートVMの削除を要求する ({{ proxmox_template_build_existing_node | default('unknown') }})"
   ansible.builtin.command:

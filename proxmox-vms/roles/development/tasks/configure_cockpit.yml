@@ -1,7 +1,5 @@
-# cockpitはSSH鍵認証のみのユーザーだとパスワードが無くWebコンソールに
-# ログインできないため、初期パスワードを設定する(cockpit_user_password は必須変数)。
-# パスワードはコントロールノード側でハッシュ化せず(passlib不要)、
-# 対象VM上のchpasswdにstdin経由で渡して処理する(シェル展開を避けるため)。
+# ログインはPAM経由のLinux通常ログインパスワード。
+# そのパスワードはcloud-initで設定される想定のため、ここでは一切設定しない。
 ---
 - name: Cockpitをインストールする
   ansible.builtin.apt:
@@ -12,35 +10,6 @@
 - name: Cockpitユーザーの既定値を設定する
   ansible.builtin.set_fact:
     development_cockpit_user: "{{ cockpit_user | default(vm_ssh_user) }}"
-
-# passwd -S は「<ユーザー> <状態> ...」を返す。状態は
-#   P  = 利用可能なパスワードが設定済み
-#   L  = ロック(鍵認証のみのcloud-initユーザーはこの状態)
-#   NP = パスワード未設定
-# あくまで「初期」パスワードなので、既に設定済み(P)の場合は上書きしない。
-# 無条件に設定すると、利用者がpasswdコマンドで変更したパスワードを
-# playbookの再実行のたびに初期値へ戻してしまうため。
-- name: パスワードの設定状況を確認する
-  ansible.builtin.command:
-    cmd: passwd -S {{ development_cockpit_user }}
-  become: true
-  register: development_cockpit_passwd_status
-  changed_when: false
-
-- name: パスワードが設定済みかを判定する
-  ansible.builtin.set_fact:
-    development_cockpit_password_is_set: >-
-      {{ (development_cockpit_passwd_status.stdout.split() | length > 1)
-         and (development_cockpit_passwd_status.stdout.split()[1] == 'P') }}
-
-- name: "初期パスワードを設定する({{ development_cockpit_user }})"
-  ansible.builtin.command:
-    cmd: chpasswd
-    stdin: "{{ development_cockpit_user }}:{{ cockpit_user_password }}"
-  become: true
-  no_log: true
-  when: not (development_cockpit_password_is_set | bool) or (cockpit_user_password_force | default(false) | bool)
-  changed_when: true
 
 - name: Cockpitサービスを有効化・起動する
   ansible.builtin.systemd:

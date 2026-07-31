@@ -21,11 +21,11 @@
 - name: 指定されたvm_hardwareに未知のカテゴリが含まれていないか検証する
   ansible.builtin.assert:
     that:
-      - (proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options'])) | length == 0
+      - (proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options', 'resize'])) | length == 0
     fail_msg: >-
       vm_hardware に未知のキーがあります:
-      {{ proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options']) | list }}
-      指定できるのは cpu, memory, disks, network, options のみです。
+      {{ proxmox_vm_hardware_normalized.keys() | difference(['cpu', 'memory', 'disks', 'network', 'options', 'resize']) | list }}
+      指定できるのは cpu, memory, disks, network, options, resize のみです。
     quiet: true
 
 - name: カテゴリごとに変数へ分解する
@@ -35,6 +35,7 @@
     proxmox_vm_hardware_disks: "{{ proxmox_vm_hardware_normalized.disks | default([]) }}"
     proxmox_vm_hardware_network: "{{ proxmox_vm_hardware_normalized.network | default([]) }}"
     proxmox_vm_hardware_options: "{{ proxmox_vm_hardware_normalized.options | default({}) }}"
+    proxmox_vm_hardware_resize: "{{ proxmox_vm_hardware_normalized.resize | default([]) }}"
 
 - name: 指定されたdisksの各項目が必須キーを満たしていることを検証する
   ansible.builtin.assert:
@@ -47,6 +48,20 @@
       (storage と size の組み合わせ)のいずれかを指定してください: {{ item }}
     quiet: true
   loop: "{{ proxmox_vm_hardware_disks }}"
+  loop_control:
+    label: "{{ item.bus | default('?') }}{{ item.index | default('?') }}"
+
+- name: 指定されたresizeの各項目が必須キーを満たしていることを検証する
+  ansible.builtin.assert:
+    that:
+      - item.bus is defined
+      - item.index is defined
+      - item.size is defined
+      - item.size | int > 0
+    fail_msg: >-
+      resize の各項目には bus, index, size(GiB単位の整数)を指定してください: {{ item }}
+    quiet: true
+  loop: "{{ proxmox_vm_hardware_resize }}"
   loop_control:
     label: "{{ item.bus | default('?') }}{{ item.index | default('?') }}"
 
@@ -80,8 +95,9 @@
         or (proxmox_vm_hardware_disks | length > 0)
         or (proxmox_vm_hardware_network | length > 0)
         or (proxmox_vm_hardware_options | length > 0)
+        or (proxmox_vm_hardware_resize | length > 0)
         or (proxmox_vm_hardware_delete | length > 0)
     fail_msg: >-
-      vm_hardware(cpu/memory/disks/network/options のいずれか)または
+      vm_hardware(cpu/memory/disks/network/options/resize のいずれか)または
       vm_hardware_delete に、1つ以上の変更内容を指定してください。
     quiet: true

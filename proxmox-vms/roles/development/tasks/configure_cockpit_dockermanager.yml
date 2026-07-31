@@ -1,10 +1,6 @@
-# cockpit-dockermanagerは公式Debianリポジトリではなく、GPG署名なしの
-# 第三者リポジトリから導入する。docker本体のインストール
-# (install_docker.yml)より後に実行し、dockerグループが存在する状態で
-# 追加すること。
-#
-# 署名鍵が提供されていないため trusted: true(署名検証なし)で追加している。
+# 署名鍵が提供されていない第三者リポジトリから導入するため trusted: true(署名検証なし)。
 # 信頼できるソースかどうかは利用者側で判断すること。
+# dockerグループが存在する必要があるため install_docker.yml より後に実行する。
 ---
 - name: Dockerプラグイン(cockpit-dockermanager)のリポジトリを追加する(GPG未署名)
   ansible.builtin.deb822_repository:
