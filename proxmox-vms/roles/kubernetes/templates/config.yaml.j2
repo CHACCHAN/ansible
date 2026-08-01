@@ -5,14 +5,20 @@
 {% if kubernetes_join_existing | bool %}
 
 # 参加先のコントロールプレーンと参加用トークン
-server: https://{{ kubernetes_server_ip }}:{{ kubernetes_server_port }}
+server: https://{{ kubernetes_server_url_host }}:{{ kubernetes_server_port }}
 token: "{{ kubernetes_token_resolved }}"
 {% endif %}
 
 # ノード名。未指定でもホスト名が使われるが、Ready判定で名前を照合するため明示する
 node-name: {{ kubernetes_node_name_resolved }}
 {% if (kubernetes_node_ip | default('', true)) | length > 0 %}
+
+# ノード間通信(kubelet・flannel・etcd)に使うアドレスとNIC。
+# NICが2枚ある場合に、クラスタ通信を占有ネットワーク側へ固定するための指定
 node-ip: {{ kubernetes_node_ip }}
+{% if (kubernetes_flannel_iface_resolved | default('', true)) | length > 0 %}
+flannel-iface: {{ kubernetes_flannel_iface_resolved }}
+{% endif %}
 {% endif %}
 {% if kubernetes_node_labels | length > 0 %}
 node-label:
@@ -32,11 +38,12 @@ node-taint:
 # 埋め込みetcdで構築する(あとからコントロールプレーンを増やせる)
 cluster-init: true
 {% endif %}
-{% if kubernetes_tls_san | length > 0 %}
+{% if (kubernetes_tls_san_resolved | default(kubernetes_tls_san)) | length > 0 %}
 
-# APIサーバー証明書に追加するSAN
+# APIサーバー証明書に追加するSAN。node-ipを占有ネットワーク側にした場合でも
+# 管理ネットワーク側のIPでkubectlを使えるよう、VMのIPを自動で含めている
 tls-san:
-{% for san in kubernetes_tls_san %}
+{% for san in (kubernetes_tls_san_resolved | default(kubernetes_tls_san)) %}
   - {{ san }}
 {% endfor %}
 {% endif %}

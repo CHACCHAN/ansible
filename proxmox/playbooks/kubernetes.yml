@@ -8,6 +8,11 @@
 # VM個別の設定に vm_ 接頭辞を使うのは、-e が全playbookから見えてしまうためです。
 # ssh_user や ipv4 をそのまま渡すとテンプレートにも焼き込まれてしまいます。
 #
+# NICは2枚構成が既定です。nic0(vm_ipv4)が外部通信用でSSHとkubectlに使い、
+# nic1(vm_cluster_ipv4)はクラスタ間の占有ネットワークとしてノード間通信だけを流します。
+# vm_cluster_ipv4 を指定すると、cloud-initのipconfig1・k3sのnode-ip / flannel-iface・
+# ワーカーの参加先までまとめて占有ネットワーク側に寄ります。
+#
 # 対象は同じホスト名のままグループへ登録し、接続先(ansible_host)だけを切り替えます:
 #   手順1〜6(Proxmox操作)     : ansible_host = 構築先ノード
 #   手順7〜8(VM内セットアップ): ansible_host = VM自身
@@ -91,6 +96,12 @@
         kubernetes_vm_ipv6_gw: "{{ vm_ipv6_gw | default('', true) }}"
         kubernetes_vm_nameserver: "{{ vm_nameserver | default('', true) }}"
         kubernetes_vm_searchdomain: "{{ vm_searchdomain | default('', true) }}"
+        # 2枚目のNIC(net1)に付けるクラスタ間の占有ネットワークのアドレス(CIDR)。
+        # 未指定ならNICは作られてもIPが付かず、クラスタ通信は net0 側で行われる
+        kubernetes_vm_cluster_ipv4: "{{ vm_cluster_ipv4 | default('', true) }}"
+        # 占有ネットワークは外に出ないため通常は指定しない
+        # (デフォルトゲートウェイが2つになると通信経路が不安定になる)
+        kubernetes_vm_cluster_ipv4_gw: "{{ vm_cluster_ipv4_gw | default('', true) }}"
 
     - name: 派生する変数を決定する
       ansible.builtin.set_fact:
@@ -108,6 +119,8 @@
           }}
         kubernetes_target_storage: >-
           {{ target_storage | default(kubernetes_proxmox_storage, true) }}
+        # 占有ネットワーク側のアドレス部分。k3sの node-ip に渡してクラスタ通信を寄せる
+        kubernetes_vm_cluster_ip: "{{ kubernetes_vm_cluster_ipv4.split('/')[0] }}"
 
     # ノード種別は「ワーカーかどうか」だけをここで判定する(構築の順番を決めるため)。
     # 値の検証と正規化は呼び出し先(proxmox-vms の kubernetes ロール)が行う。
@@ -128,6 +141,28 @@
         kubernetes_join_ssh_prikey: >-
           {{ kubernetes_server_ssh_prikey | default(kubernetes_vm_ssh_prikey, true) }}
 
+    # NICが2枚ある構成では、ノード間通信(kubelet・flannel・etcd)を占有ネットワーク側に
+    # 寄せる。SSH接続先(kubernetes_server_ip)は管理ネットワーク側のまま変えないため、
+    # APIサーバーへの接続先だけを kubernetes_server_node_ip として別に渡す。
+    #
+    # 参加先の占有ネットワーク側IPは、この実行に含まれていればそのホストから取る。
+    # 既存クラスタにワーカーだけを足す場合は -e で直接指定する。
+    - name: 占有ネットワークを使う場合のクラスタ通信先を決定する
+      ansible.builtin.set_fact:
+        # 明示指定があればそれを優先する(自分自身の値を参照して既存値を残している)
+        kubernetes_node_ip: >-
+          {{ kubernetes_node_ip | default(kubernetes_vm_cluster_ip, true) }}
+        # 自分が占有ネットワークに繋がっていないなら、参加先もそちら側にはしない
+        # (届かないアドレスを指してしまうため)
+        kubernetes_server_node_ip: >-
+          {{
+            kubernetes_server_node_ip
+            | default(hostvars[kubernetes_join_ip].kubernetes_vm_cluster_ip
+                      if ((kubernetes_vm_cluster_ip | length > 0)
+                          and (kubernetes_join_ip in ansible_play_hosts)) else '', true)
+          }}
+      when: (kubernetes_join_ip | length > 0) or (kubernetes_vm_cluster_ip | length > 0)
+
     # 同じノードに複数台を同時構築するとVMID重複で衝突するため、
     # テンプレート構築はノードごとに先頭の1台だけが担当する
     - name: テンプレート構築を担当するホストを決める
@@ -147,6 +182,7 @@
           / ストレージ {{ kubernetes_target_storage | default('(未指定)', true) }}
           / {{ kubernetes_os_type }} {{ kubernetes_os_version }}
           / IP {{ kubernetes_vm_ipv4 }} gw {{ kubernetes_vm_ipv4_gw | default('(未指定)', true) }}
+          / 占有ネットワーク {{ kubernetes_vm_cluster_ipv4 | default('(なし。クラスタ通信もnet0)', true) }}
           / ログイン {{ kubernetes_vm_ssh_user | default('(未指定)', true) }}
           / k3s {{ 'ワーカー(参加先 ' ~ kubernetes_join_ip ~ ')'
                    if (kubernetes_is_agent | bool)
@@ -161,9 +197,24 @@
           テンプレート素のディスク(数GB)のままVMが構築されるため、
           コンテナイメージを置く /var/lib/rancher がすぐ一杯になります。
           インベントリ版の既定値と同じにするには
-          vm_hardware={"cpu":{"cores":4,"type":"host"},"memory":{"size":8192},"resize":[{"bus":"scsi","index":0,"size":64}]}
+          vm_hardware={"cpu":{"cores":4,"type":"host"},"memory":{"size":4096},"network":[{"index":0,"model":"virtio","bridge":"vmbr2"},{"index":1,"model":"virtio","bridge":"vmbr3"}],"resize":[{"bus":"scsi","index":0,"size":32}]}
           のように指定してください。
       when: (vm_hardware | default({})).resize is not defined
+
+    # 占有ネットワークのIPを指定していても、NICが1枚しか無ければ付ける先が無い。
+    # テンプレートは net0 だけを持つため、net1 は vm_hardware で足す必要がある
+    - name: 占有ネットワーク用NICの指定漏れで停止する
+      ansible.builtin.assert:
+        that:
+          - 1 in ((vm_hardware | default({})).network | default([]) | map(attribute='index') | map('int'))
+        fail_msg: >-
+          vm_cluster_ipv4({{ kubernetes_vm_cluster_ipv4 }})を指定していますが、
+          vm_hardware に2枚目のNIC(network の index: 1)がありません。
+          テンプレートは net0 の1枚しか持たないため、占有ネットワークに繋ぐNICを
+          vm_hardware={"network":[{"index":0,"model":"virtio","bridge":"vmbr2"},
+          {"index":1,"model":"virtio","bridge":"vmbr3"}]} のように追加してください。
+        quiet: true
+      when: kubernetes_vm_cluster_ipv4 | length > 0
 
     # 呼び出し先が処理するproxmoxグループへ、ホスト名のまま登録して接続先だけ向け直す。
     # add_hostは1回しか実行されないため、対象ホストをループして1台ずつ登録する。
@@ -242,6 +293,9 @@
     ipv4_gw: "{{ kubernetes_vm_ipv4_gw }}"
     ipv6: "{{ kubernetes_vm_ipv6 }}"
     ipv6_gw: "{{ kubernetes_vm_ipv6_gw }}"
+    # 2枚目のNIC(vm_hardware の network index:1)に付ける占有ネットワークのアドレス
+    net1_ipv4: "{{ kubernetes_vm_cluster_ipv4 }}"
+    net1_ipv4_gw: "{{ kubernetes_vm_cluster_ipv4_gw }}"
     nameserver: "{{ kubernetes_vm_nameserver }}"
     searchdomain: "{{ kubernetes_vm_searchdomain }}"
 

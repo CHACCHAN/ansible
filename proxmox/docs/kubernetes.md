@@ -26,8 +26,8 @@ ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
     vm_ssh_pubkey_file=~/.ssh/<公開鍵> vm_ssh_prikey=~/.ssh/<秘密鍵> \
-    kubernetes_node_role=server \
-    vm_hardware={"cpu":{"cores":4,"type":"host"},"memory":{"size":8192},"resize":[{"bus":"scsi","index":0,"size":64}]} \
+    kubernetes_node_role=server vm_cluster_ipv4=<占有ネットワークのIPv4/CIDR> \
+    vm_hardware={"cpu":{"cores":4,"type":"host"},"memory":{"size":4096},"network":[{"index":0,"model":"virtio","bridge":"vmbr2"},{"index":1,"model":"virtio","bridge":"vmbr3"}],"resize":[{"bus":"scsi","index":0,"size":32}]} \
     vm_options={"agent":1,"onboot":1}'
 
 # 手動指定版(ワーカー)。参加先のIPを足すだけで、トークンは自動取得します
@@ -115,7 +115,8 @@ ssh -i ~/.ssh/<秘密鍵> <vm_ssh_user>@192.168.10.70 'kubectl get nodes -o wide
 | `vm_id` | 新規VMのVMID |
 | `vm_name` | VM名。**そのままKubernetesのノード名になります** |
 | `vm_node` | 構築先ProxmoxノードのIPアドレス |
-| `vm_ipv4` | VMの固定IP(CIDR)。省略時は**ホスト名 + `vm_ipv4_prefix`** から組み立てます |
+| `vm_ipv4` | nic0(外部通信用)の固定IP(CIDR)。省略時は**ホスト名 + `vm_ipv4_prefix`** から組み立てます |
+| `vm_cluster_ipv4` | nic1(クラスタ占有ネットワーク)の固定IP(CIDR)。省略するとクラスタ通信もnic0を使います(後述) |
 | `kubernetes_node_role` | `server`(コントロールプレーン)/ `agent`(ワーカー) |
 
 `proxmox_ip` ではなく `vm_node` なのは、`-e proxmox_ip=...` を使うと呼び出し先が
@@ -140,9 +141,10 @@ ssh -i ~/.ssh/<秘密鍵> <vm_ssh_user>@192.168.10.70 'kubectl get nodes -o wide
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
-| CPU / RAM | 4コア(`host`)/ 8GB | `cpu: {cores: 4, type: host}` `memory: {size: 8192}` |
+| CPU / RAM | 4コア(`host`)/ 4GB | `cpu: {cores: 4, type: host}` `memory: {size: 4096}` |
 | BIOS / マシン / 画面 | SeaBIOS / Q35 / 標準VGA | `options: {bios: seabios, machine: q35, vga: std}` |
-| ディスク | 64GiB | `resize: [{bus: scsi, index: 0, size: 64}]` |
+| NIC | nic0 = `vmbr2` / nic1 = `vmbr3` | `network: [{index: 0, model: virtio, bridge: vmbr2}, {index: 1, model: virtio, bridge: vmbr3}]` |
+| ディスク | 32GiB | `resize: [{bus: scsi, index: 0, size: 32}]` |
 | QEMUエージェント / 自動起動 | 有効 | `agent: 1` `onboot: 1` |
 
 - ノードごとに変える場合は `hosts:` の各VMの下に `vm_hardware` を書けば上書きできます
@@ -151,13 +153,59 @@ ssh -i ~/.ssh/<秘密鍵> <vm_ssh_user>@192.168.10.70 'kubectl get nodes -o wide
 - `-e` で `vm_hardware` を渡すとインベントリの値は**置き換え**になるため、
   変更しない項目も併せて指定してください(JSONにはスペースを含めないこと)
 
+## ネットワーク構成(NIC 2枚)
+既定では**NICを2枚**持たせ、外部通信とクラスタ内部通信を分けます。
+
+| NIC | ブリッジ | IPアドレス | 用途 |
+| --- | --- | --- | --- |
+| nic0 | `vmbr2` | ホスト名のIP(または `vm_ipv4`) | 外部通信。SSH・手元からの `kubectl`・イメージの取得 |
+| nic1 | `vmbr3` | `vm_cluster_ipv4` | クラスタ間の占有ネットワーク。ノード間通信のみ |
+
+`vm_cluster_ipv4` を書くと、以下がまとめて自動設定されます。
+
+1. cloud-initの `ipconfig1` にそのアドレスが入る(nic1にIPが付く)
+2. k3sの `node-ip` がそのIPになる(kubelet・etcd・ノード間アクセスが占有ネットワークへ)
+3. k3sの `flannel-iface` が**そのIPを持つNICに自動で揃う**(Pod間通信も占有ネットワークへ)
+4. ワーカーの参加先(`server:`)が、**同じ実行に含まれるコントロールプレーンの
+   占有ネットワーク側IP**になる
+
+```yaml
+kubernetes:
+  hosts:
+    172.16.12.11:
+      vm_cluster_ipv4: 10.10.10.11/24   # nic1に付くIP
+      kubernetes_node_role: server
+    192.168.10.71:
+      vm_cluster_ipv4: 10.10.10.21/24
+      kubernetes_node_role: agent
+  vars:
+    kubernetes_server_ip: 172.16.12.11  # SSH接続先。外部通信用のIPのまま
+```
+
+- **`kubernetes_server_ip` は外部通信用のIPのままにしてください。** 占有ネットワークは
+  Ansibleの実行元から見えないのが普通で、トークン取得とReady確認のSSHに使うためです。
+  APIサーバーへの接続先だけが自動で占有ネットワーク側に切り替わります
+- ゲートウェイ(`vm_cluster_ipv4_gw`)は**指定しないでください**。デフォルトゲートウェイが
+  2枚のNICに分かれると通信経路が不安定になります
+- コントロールプレーンの `tls-san` には外部通信用のIPが**自動で追加**されるため、
+  手元からの `kubectl` はそのまま使えます
+- 既存クラスタにワーカーだけを足す場合(`--limit` でワーカーのみ)は、参加先が実行対象に
+  含まれないため `-e "kubernetes_server_node_ip=<コントロールプレーンの占有ネットワークIP>"`
+  を付けてください
+- **1枚構成に戻す場合**は `vm_cluster_ipv4` を消し、`vm_hardware` の `network` から
+  `index: 1` を外します。クラスタ通信はnic0に戻ります
+- `vm_cluster_ipv4` を書いたのに `vm_hardware` にnic1が無い場合は、実行開始時にエラーで
+  停止します(テンプレートはnic0の1枚しか持たないため)
+
 ## k3sの設定
 `kubernetes_` で始まる変数はそのまま手順8へ渡ります。インベントリにも `-e` にも書けます。
 
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
 | `kubernetes_node_role` | **(必須)** | `server` / `agent` |
-| `kubernetes_server_ip` | (未設定) | ワーカーの参加先。**agentでは必須** |
+| `kubernetes_server_ip` | (未設定) | ワーカーの参加先(SSH接続先)。**agentでは必須** |
+| `kubernetes_server_node_ip` | (自動判定) | 参加先の占有ネットワーク側IP。既存クラスタに足す場合のみ指定 |
+| `kubernetes_node_ip` | `vm_cluster_ipv4` | ノード間通信に使うIP。通常は自動設定に任せます |
 | `kubernetes_version` | (最新安定版) | 例: `v1.34.1+k3s1` |
 | `kubernetes_disable` | `[]` | 標準コンポーネントの無効化。例: `["traefik"]` |
 | `kubernetes_cluster_init` | `false` | 1台目で埋め込みetcdを使う(HA構成にするなら必須) |
@@ -184,6 +232,7 @@ ssh -i ~/.ssh/<秘密鍵> <vm_ssh_user>@192.168.10.70 'kubectl get nodes -o wide
 | `target_storage` | `proxmox_storage` と同じ | VMのディスクを置くストレージ名 |
 | `vm_hardware_delete` / `vm_options_delete` | (なし) | 削除するプロパティ |
 | `vm_ipv6` / `vm_ipv6_gw` | (なし) | IPv6アドレス(CIDR)とゲートウェイ |
+| `vm_cluster_ipv4_gw` | (なし) | 占有ネットワークのゲートウェイ。**通常は指定しません**(経路が不安定になります) |
 | `vm_nameserver` / `vm_searchdomain` | (なし) | DNSサーバーと検索ドメイン |
 | `vm_ip` | ホスト名 | SSHの接続先(ホスト名と違うIPで繋ぐ場合) |
 | `vm_ssh_wait_timeout` | `600` | SSHログインできるまでの待機上限(秒) |

@@ -25,8 +25,10 @@ ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 | `ssh_user` | `--ciuser` | cloud-initが作成するログインユーザー名 |
 | `ssh_password` | `--cipassword` | そのユーザーのログインパスワード |
 | `ssh_pubkey` | `--sshkey` | 登録するSSH公開鍵 |
-| `ipv4` / `ipv4_gw` | `--ipconfig0` | IPv4アドレス(CIDR形式)とゲートウェイ |
-| `ipv6` / `ipv6_gw` | `--ipconfig0` | IPv6アドレス(CIDR形式)とゲートウェイ |
+| `ipv4` / `ipv4_gw` | `--ipconfig0` | 1枚目のNIC(net0)のIPv4アドレス(CIDR形式)とゲートウェイ |
+| `ipv6` / `ipv6_gw` | `--ipconfig0` | 1枚目のNIC(net0)のIPv6アドレス(CIDR形式)とゲートウェイ |
+| `net1_ipv4` / `net1_ipv4_gw` | `--ipconfig1` | 2枚目のNIC(net1)のIPv4アドレスとゲートウェイ |
+| `net1_ipv6` / `net1_ipv6_gw` | `--ipconfig1` | 2枚目のNIC(net1)のIPv6アドレスとゲートウェイ |
 | `nameserver` | `--nameserver` | DNSサーバー(複数はスペース区切り) |
 | `searchdomain` | `--searchdomain` | 検索ドメイン |
 
@@ -37,8 +39,25 @@ ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 - `ipv4` / `ipv6` はプレフィックス長込みのCIDR形式で指定します(例: `192.168.10.50/24`、`2001:db8::50/64`)
 - `ipv4_gw` / `ipv6_gw` はそれぞれ `ipv4` / `ipv6` と併せて指定してください
   (ゲートウェイのみの指定はエラーになります)
-- `ipconfig0` は指定した値でまとめて上書きされます。IPv4とIPv6の両方を使っている場合は、
-  変更しない側も併せて指定してください
+- `ipconfig0` / `ipconfig1` は指定した値でまとめて上書きされます。IPv4とIPv6の両方を
+  使っている場合は、変更しない側も併せて指定してください
+
+## NICが2枚あるVM(net1_*)
+`net1_*` は2枚目のNIC用で、外部通信とクラスタ内部通信を別のブリッジに分けたい場合に使います。
+**NIC自体は [proxmox_vm_hardware.yml](proxmox_vm_hardware.md) の `network` で先に追加**してください
+(このplaybookはIPを設定するだけで、NICは足しません)。
+
+```sh
+# net1(占有ネットワーク)にIPだけを付ける。ゲートウェイは指定しない
+ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
+-e "proxmox_ip=192.168.10.11 vm_id=101 net1_ipv4=10.10.10.21/24"
+```
+
+- **`net1_ipv4_gw` は通常指定しません。** デフォルトゲートウェイが2枚のNICに分かれると、
+  通信先によって使うNICが変わり経路が不安定になります。外に出ない占有ネットワークなら
+  アドレスだけで足ります(指定した場合は実行時に注意を表示します)
+- 3枚目以降(`ipconfig2` 〜)には対応していません。必要な場合はProxmoxホスト上で
+  `qm set <vmid> --ipconfig2 ip=...` を直接実行してください
 
 ## ssh_password について
 `ssh_password` は**VM内のログインパスワード**(cloud-initの `cipassword`)で、

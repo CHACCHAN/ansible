@@ -51,7 +51,8 @@ Proxmox側では**QEMUゲストエージェントの有効化**(`qm set <vmid> -
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
 | `kubernetes_node_role` | **(必須)** | `server`(コントロールプレーン)/ `agent`(ワーカー) |
-| `kubernetes_server_ip` | (未設定) | 参加先コントロールプレーンのIP。**agentでは必須** |
+| `kubernetes_server_ip` | (未設定) | 参加先コントロールプレーンのIP。**agentでは必須**。SSH(トークン取得・Ready確認)にも使います |
+| `kubernetes_server_node_ip` | `kubernetes_server_ip` | 参加先のAPIサーバーへ接続するIP。**クラスタ通信を占有ネットワークに分ける場合のみ**指定(後述) |
 | `kubernetes_server_port` | `6443` | APIサーバーのポート(変える場合は `kubernetes_extra_config` の `https-listen-port` も合わせる) |
 | `kubernetes_server_ssh_user` | `vm_ssh_user` | 参加先へSSH接続するユーザー(トークン取得用) |
 | `kubernetes_server_ssh_prikey` | `vm_ssh_prikey` | 参加先へSSH接続する秘密鍵(トークン取得用) |
@@ -59,7 +60,8 @@ Proxmox側では**QEMUゲストエージェントの有効化**(`qm set <vmid> -
 | `kubernetes_version` | (最新安定版) | 例: `v1.34.1+k3s1`。指定するとその版に揃えます |
 | `kubernetes_channel` | `stable` | バージョン未指定時に使うチャンネル(`latest` など) |
 | `kubernetes_node_name` | VMのホスト名 | Kubernetes上のノード名(小文字) |
-| `kubernetes_node_ip` | (自動判定) | ノードのIP。**NICが複数ある場合のみ**指定 |
+| `kubernetes_node_ip` | (自動判定) | ノード間通信に使うIP。**NICが複数ある場合のみ**指定(後述) |
+| `kubernetes_flannel_iface` | `kubernetes_node_ip` のNIC | Pod間通信(flannel)が使うNIC名。通常は自動判定に任せます |
 | `kubernetes_node_labels` | `[]` | 例: `["disk=ssd"]` |
 | `kubernetes_node_taints` | `[]` | 例: `["node-role.kubernetes.io/control-plane:NoSchedule"]` |
 | `kubernetes_disable` | `[]` | 標準コンポーネントの無効化。例: `["traefik"]` |
@@ -102,6 +104,38 @@ Proxmox側では**QEMUゲストエージェントの有効化**(`qm set <vmid> -
 - 取得したトークンは `/etc/rancher/k3s/config.yaml`(root専用・`0600`)に書き込まれます。
   playbookのログには出しません(`no_log`)
 - 参加先に繋がらない・k3sが入っていない場合は、その旨を表示して**k3sを入れる前に**中止します
+
+## NICを2枚に分ける(クラスタ間の占有ネットワーク)
+外部通信用のNICとは別に、**ノード間通信だけを流す占有ネットワーク**を持たせられます。
+`kubernetes_node_ip` に占有ネットワーク側のIPを指定すると、以下がまとめてそちらに寄ります。
+
+| 通信 | 使われるNIC |
+| --- | --- |
+| kubelet / etcd / APIサーバーへのノード間アクセス(`node-ip`) | 占有ネットワーク |
+| Pod間通信のVXLAN(`flannel-iface`) | 占有ネットワーク(node-ipのNICを自動判定) |
+| ワーカーからの参加先(`server:`) | `kubernetes_server_node_ip` を指定した場合のみ占有ネットワーク |
+| **AnsibleのSSH・手元からの `kubectl`** | **外部通信用のまま**(`vm_ip` / `kubernetes_server_ip`) |
+
+```sh
+# ワーカー: 管理は192.168.10.x、クラスタ通信は10.10.10.x に分ける
+ansible-playbook playbooks/kubernetes.yml -vv \
+-e "vm_ip=192.168.10.71 vm_ssh_user=k3s vm_ssh_prikey=~/.ssh/id_ed25519_k3s \
+    kubernetes_node_role=agent \
+    kubernetes_server_ip=192.168.10.70 kubernetes_server_node_ip=10.10.10.11 \
+    kubernetes_node_ip=10.10.10.21"
+```
+
+- **SSH接続先の `kubernetes_server_ip` は変えません。** 占有ネットワークはVM間だけの
+  ネットワークで、Ansibleの実行元からは見えないのが普通だからです。
+  APIサーバーへの接続先だけを `kubernetes_server_node_ip` で分けています
+- `kubernetes_node_ip` に指定したIPを持つNICがVM内に無い場合は、
+  **k3sを入れる前に**エラーで停止します(cloud-initのIP設定漏れをそこで拾えます)
+- コントロールプレーンでは、`tls-san` に `vm_ip`(外部通信用のIP)が**自動で追加**されます。
+  `node-ip` を占有ネットワーク側にすると証明書のSANがそちらだけになり、
+  手元から `kubectl` が使えなくなるためです
+- VMのNIC自体の追加と占有ネットワークのIP設定はProxmox側の作業です。
+  `proxmox/playbooks/kubernetes.yml` から構築する場合は `vm_cluster_ipv4` を書くだけで
+  ここまで自動で設定されます([proxmox/docs/kubernetes.md](../../proxmox/docs/kubernetes.md))
 
 ## swapの扱い
 Kubernetesはノードにswapが無い前提で設計されているため、このロールでは
@@ -171,6 +205,8 @@ kubectl delete node <ノード名>
 | 参加先に接続できず中止する | コントロールプレーンのVMが起動しているか、`kubernetes_server_ssh_user` / `kubernetes_server_ssh_prikey` が合っているか |
 | node-tokenを読めず中止する | 参加先が `kubernetes_node_role=server` で構築済みか(`sudo systemctl status k3s`) |
 | ワーカーがReadyにならない | ワーカー側 `sudo journalctl -u k3s-agent -n 50`。ポート6443へ到達できるか、時刻がずれていないか |
+| 「指定されたノードIPを持つNICが見つかりません」で止まる | 2枚目のNICにIPが付いているか(`ip -4 addr`)。cloud-initの `net1_ipv4` を設定した後にVMを起動し直したか |
+| NICを2枚にしたらPod間通信だけ届かない | 全ノードの `sudo cat /etc/rancher/k3s/config.yaml` で `flannel-iface` が占有ネットワーク側のNICに揃っているか。占有ネットワークのブリッジが全Proxmoxノードで繋がっているか |
 | Podが起動しない・イメージが落ちてこない | `df -h /` と `kubectl describe pod`。ディスク不足なら `vm_hardware` の `resize` を確認 |
 | NFSのPVがマウントできない | `nfs-common` は基本パッケージで入ります。NFSサーバー側のエクスポート設定を確認 |
 | iSCSI(Longhorn)でアタッチに失敗する | `systemctl status iscsid`。`kubernetes_install_open_iscsi=false` にしていないか |
