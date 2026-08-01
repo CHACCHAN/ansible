@@ -1,0 +1,40 @@
+# Debianのcloud imageは既定でufw未導入のため通常はスキップされる。
+# 利用者が後からufwを有効にしていた場合のみポートを開ける(導入も有効化もしない)。
+#
+# 開けるポートは公式の「Networking / Inbound Rules」に合わせている。
+# https://docs.k3s.io/installation/requirements#inbound-rules-for-k3s-nodes
+---
+- name: 開放するポートを決定する
+  ansible.builtin.set_fact:
+    kubernetes_firewall_ports: >-
+      {{ ['8472/udp', '10250/tcp']
+         + ([kubernetes_server_port ~ '/tcp'] if kubernetes_role_resolved == 'server' else [])
+         + (['2379/tcp', '2380/tcp']
+            if (kubernetes_role_resolved == 'server'
+                and ((kubernetes_cluster_init | bool) or (kubernetes_join_existing | bool)))
+            else []) }}
+
+- name: Ufwが導入されているか確認する
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: kubernetes_ufw_bin
+
+- name: Ufwが有効になっているか確認する
+  ansible.builtin.command:
+    cmd: ufw status
+  become: true
+  changed_when: false
+  failed_when: false
+  register: kubernetes_ufw_status
+  when: kubernetes_ufw_bin.stat.exists
+
+- name: "K3sが使うポートをufwで開放する({{ item }})"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] }}"
+  become: true
+  loop: "{{ kubernetes_firewall_ports }}"
+  when:
+    - kubernetes_ufw_bin.stat.exists
+    - "'Status: active' in (kubernetes_ufw_status.stdout | default(''))"

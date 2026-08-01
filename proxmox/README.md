@@ -18,8 +18,12 @@
 | --- | --- |
 | [development.yml](docs/development.md) | 開発専用VMを構築する(テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init設定 → 起動 → VM内セットアップ) |
 | [authentik.yml](docs/authentik.md) | Authentik(SSO/IdP)のVMを構築する(上と同じ流れ + VM内でDocker ComposeによるAuthentik構築) |
+| [kubernetes.yml](docs/kubernetes.md) | Kubernetes(k3s)のクラスタを構築する(上と同じ流れ + VM内でk3s導入とクラスタへの参加) |
 
-どちらも構築の流れは同じで、最後に呼ぶ `proxmox-vms/` のplaybookだけが違います。
+いずれも構築の流れは同じで、最後に呼ぶ `proxmox-vms/` のplaybookだけが違います。
+`kubernetes.yml` だけは、最後のVM内セットアップを
+**コントロールプレーン → ワーカーの順に1台ずつ**実行します
+(ワーカーが参加先からトークンを取得するため)。
 
 ## インベントリ
 インベントリは**playbookごとにファイルを分けています**(グループ名 = playbook名)。
@@ -30,6 +34,7 @@
 inventory/
   development.yml   # playbooks/development.yml 用(グループ: development)
   authentik.yml     # playbooks/authentik.yml 用(グループ: authentik)
+  kubernetes.yml    # playbooks/kubernetes.yml 用(グループ: kubernetes)
 ```
 
 - ホスト名は**構築するVMのIPアドレス**です。VMごとの値(VMID・VM名・構築先ノード)は

@@ -9,6 +9,7 @@
 | --- | --- |
 | [development.yml](docs/development.md) | 開発専用VM(Cockpit/Docker/k8s CLI、任意でRDPデスクトップ) |
 | [authentik.yml](docs/authentik.md) | Authentik(SSO/IdP)をDocker Composeで構築 |
+| [kubernetes.yml](docs/kubernetes.md) | Kubernetes(k3s)のコントロールプレーン / ワーカーを構築 |
 
 ## 全playbook共通の指定
 ```sh
@@ -31,19 +32,24 @@ ansible-playbook playbooks/<playbook名>.yml -vv \
 - 各playbookは最後にVMを再起動します(dockerグループへの追加とカーネル更新の反映のため)
 
 ## 共通セットアップ(tasks/)
-どのVMにも必要な処理は `tasks/` 配下に置き、全ロールで共有しています。
+複数のロールで使う処理は `tasks/` 配下に置いて共有しています。
+**どれを使うかは各ロールが選びます**(例: Dockerは`development`と`authentik`だけ。
+`kubernetes`はk3s同梱のcontainerdを使うため入れません)。
 
-| ファイル | 内容 |
-| --- | --- |
-| `register-vm-host.yml` | 接続先VMの登録とSSH疎通確認 |
-| `assert_debian.yml` | 対象OSがDebianであることの確認 |
-| `update_packages.yml` | apt update && upgrade |
-| `configure_timezone.yml` / `configure_locale.yml` | タイムゾーン / ロケール |
-| `configure_swap.yml` | zramによる動的swap |
-| `configure_admin_group.yml` | SSHユーザーをsudoグループに追加 |
-| `install_base_packages.yml` | git, curl等 |
-| `install_qemu_guest_agent.yml` | QEMUゲストエージェント |
-| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 |
+| ファイル | 内容 | 使うロール |
+| --- | --- | --- |
+| `register-vm-host.yml` | 接続先VMの登録とSSH疎通確認 | 全playbook |
+| `assert_debian.yml` | 対象OSがDebianであることの確認 | 全ロール |
+| `update_packages.yml` | apt update && upgrade | 全ロール |
+| `configure_timezone.yml` / `configure_locale.yml` | タイムゾーン / ロケール | 全ロール |
+| `configure_swap.yml` | zramによる動的swap | 全ロール(`kubernetes`は既定で無効化) |
+| `configure_admin_group.yml` | SSHユーザーをsudoグループに追加 | 全ロール |
+| `install_base_packages.yml` | git, curl, nfs-common等 | 全ロール |
+| `install_qemu_guest_agent.yml` | QEMUゲストエージェント | 全ロール |
+| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 | `development` / `authentik` |
+
+- `nfs-common` はどのVMからでもNFS共有をマウントできるよう基本パッケージに含めています
+  (Kubernetesのnfs系ボリュームもノード側のこれを使います)
 
 - QEMUゲストエージェントは、ホスト側で `qm set <vmid> --agent enabled=1` が必要です
   (`proxmox-hosts/` の管轄。未設定でもplaybookは失敗せず案内を表示します)

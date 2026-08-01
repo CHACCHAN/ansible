@@ -1,0 +1,111 @@
+# 以降のタスクが参照する値(ノード種別・サービス名・ノード名など)をここで確定させる。
+---
+- name: 必須変数が正しく渡されているか検証する
+  ansible.builtin.assert:
+    that:
+      - vm_ssh_user is defined
+      - (vm_ssh_user | default('', true)) | length > 0
+    fail_msg: >-
+      vm_ssh_user が指定されていません。
+      sudoグループへの追加やkubeconfigの配置先に使うため、
+      -e "vm_ssh_user=<ユーザ名>" で指定してください。
+    quiet: true
+
+# 共通の assert_debian.yml はディストリビューションしか見ないため、
+# ここでバージョンも確認する(このロールはDebian 13のcloud image + cloud-initで
+# 作られたVMだけを対象にしている)。
+- name: 対象OSがDebian 13であることを確認する
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_major_version == '13'
+    fail_msg: >-
+      このロールはDebian 13(trixie)のcloud image専用です
+      (検出されたバージョン: {{ ansible_distribution }} {{ ansible_distribution_version }})。
+    quiet: true
+
+# 「コントロールプレーン」「ワーカー」という呼び方でも指定できるようにする
+# (k3s自身の呼び方は server / agent)。
+- name: 指定されたノード種別を正規化する
+  ansible.builtin.set_fact:
+    kubernetes_role_resolved: >-
+      {{ 'server' if (kubernetes_given_role in kubernetes_server_aliases)
+         else ('agent' if (kubernetes_given_role in kubernetes_agent_aliases) else '') }}
+  vars:
+    kubernetes_given_role: "{{ kubernetes_node_role | default('', true) | lower }}"
+    kubernetes_server_aliases: [server, control-plane, controlplane, control_plane, master]
+    kubernetes_agent_aliases: [agent, worker, node]
+
+- name: ノード種別の指定を検証する
+  ansible.builtin.assert:
+    that:
+      - kubernetes_role_resolved | length > 0
+    fail_msg: >-
+      kubernetes_node_role が指定されていないか、値が不正です
+      (指定値: {{ kubernetes_node_role | default('(未指定)') }})。
+      -e "kubernetes_node_role=server"(コントロールプレーン)または
+      -e "kubernetes_node_role=agent"(ワーカー)で指定してください
+      (control-plane / worker という書き方でも受け付けます)。
+    quiet: true
+
+- name: 参加先の指定を検証する
+  ansible.builtin.assert:
+    that:
+      - (kubernetes_server_ip | default('', true)) | length > 0
+    fail_msg: >-
+      ワーカー(agent)には参加先のコントロールプレーンが必要です。
+      -e "kubernetes_server_ip=<コントロールプレーンのIPアドレス>" で指定してください
+      (トークンはそのVMにSSH接続して自動取得します)。
+    quiet: true
+  when: kubernetes_role_resolved == 'agent'
+
+# serverで自分自身を指しているのは「クラスタの1台目」の指定として扱い、参加しない。
+# インベントリのグループ変数に参加先を1つ書いて全ノードで共有できるようにするため。
+- name: ワーカーの参加先が自分自身になっていないことを検証する
+  ansible.builtin.assert:
+    that:
+      - kubernetes_server_ip != vm_ip
+    fail_msg: >-
+      ワーカー(agent)の kubernetes_server_ip に自分自身({{ vm_ip }})が指定されています。
+      参加先には「既に構築済みの別のコントロールプレーン」を指定してください。
+    quiet: true
+  when:
+    - kubernetes_role_resolved == 'agent'
+    - (kubernetes_server_ip | default('', true)) | length > 0
+
+- name: APIサーバーのポート指定を検証する
+  ansible.builtin.assert:
+    that:
+      - kubernetes_server_port | int > 0
+      - kubernetes_server_port | int < 65536
+    fail_msg: >-
+      kubernetes_server_port が不正です
+      (1〜65535の範囲で指定してください。指定値: {{ kubernetes_server_port }})。
+    quiet: true
+
+- name: 派生する値を決定する
+  ansible.builtin.set_fact:
+    # 参加先が指定されていれば既存クラスタへの参加(agentは常にこちら)。
+    # 自分自身を指している場合は1台目のコントロールプレーンとして扱う
+    kubernetes_join_existing: >-
+      {{ ((kubernetes_server_ip | default('', true)) | length > 0)
+         and (kubernetes_server_ip != vm_ip) }}
+    kubernetes_service_name: "{{ 'k3s' if kubernetes_role_resolved == 'server' else 'k3s-agent' }}"
+    # ノード名はKubernetesのオブジェクト名になるため小文字にする
+    kubernetes_node_name_resolved: "{{ kubernetes_node_name | default(ansible_hostname | lower, true) }}"
+
+# agentにはkubeconfigが無いため、Readyかどうかはコントロールプレーン側から確認する。
+- name: ノードの状態を確認するホストを決定する
+  ansible.builtin.set_fact:
+    kubernetes_check_host: >-
+      {{ inventory_hostname if kubernetes_role_resolved == 'server' else kubernetes_server_ip }}
+
+- name: 構築する内容を表示する
+  ansible.builtin.debug:
+    msg: >-
+      {{ vm_ip }} を k3s の
+      {{ 'コントロールプレーン(server)' if kubernetes_role_resolved == 'server' else 'ワーカー(agent)' }}
+      として構築します
+      / ノード名 {{ kubernetes_node_name_resolved }}
+      / バージョン {{ kubernetes_version | default(kubernetes_channel ~ 'チャンネルの最新版', true) }}
+      {{ '/ 参加先 https://' ~ kubernetes_server_ip ~ ':' ~ kubernetes_server_port
+         if (kubernetes_join_existing | bool) else '/ 新規クラスタ' }}

@@ -7,3 +7,6 @@ __pycache__/
 .venv/
 .env
 .claude
+
+# Web UI の実行履歴(ansible-runner の artifacts)
+web/data/
