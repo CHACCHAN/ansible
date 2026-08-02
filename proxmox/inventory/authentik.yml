@@ -33,7 +33,7 @@ authentik:
     vm_hardware:
       cpu:
         cores: 4
-        type: host
+        type: x86-64-v3
       memory:
         size: 8192
       options:
