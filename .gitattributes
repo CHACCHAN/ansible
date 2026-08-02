@@ -1,25 +1,3 @@
-# =====================================================================
-# 改行コード / ファイル種別の正規化設定
-#
-# このリポジトリのファイルは最終的に Linux (Proxmox ホスト / Debian VM) 上で
-# 解釈される。Windows ホストで clone した際に CRLF へ自動変換されると、
-# VM へ配置されるスクリプトが `bad interpreter: /bin/bash^M` で起動しなく
-# なるため、リポジトリ内・作業ツリーともに LF で統一する。
-#
-# 適用範囲についての注意:
-#   この設定は「今後の checkout / commit」に効く。既に CRLF で
-#   commit 済みのファイルは自動では直らない。
-#   なお本設定の導入時点でリポジトリ内に CRLF を含むファイルは
-#   1 件も無いことを確認済みのため、導入による差分は発生しない。
-#
-# 現状確認:
-#   git ls-files --eol | grep -E 'i/crlf|w/crlf'   # 0 件なら正常
-#
-# 将来 CRLF が混入した場合の再正規化 (差分が混ざらないよう別コミットにする):
-#   git add --renormalize .
-#   git commit -m "chore: renormalize line endings to LF"
-# =====================================================================
-
 # 既定: Git がテキストと判定したファイルは、リポジトリ内は LF で保存し、
 # checkout 時も LF のまま展開する (Windows でも CRLF に変換しない)。
 * text=auto eol=lf
@@ -66,15 +44,3 @@ proxmox-hosts/vault/secrets.yml  -text -diff -merge
 *.iso   binary
 *.img   binary
 *.qcow2 binary
-
-# --- symlink について -------------------------------------------------
-# 【重要】現在このリポジトリに symlink は 1 件も存在しない。
-#   確認方法: git ls-files -s | grep ^120000   -> 0 件
-#
-# symlink は Git のオブジェクトモード (120000) で表現されるものであり、
-# .gitattributes で「symlink として扱う」ことを指定する構文は存在しない。
-# Windows で symlink を実体化させるには、.gitattributes ではなく
-#   - git config --global core.symlinks true
-#   - OS 側の権限 (設定 > システム > 開発者向け > 開発者モードをオン)
-# が必要になる。core.symlinks は clone 時に .git/config へ焼き付けられるため、
-# 後から --global を変えても既存の clone には反映されない点に注意。
