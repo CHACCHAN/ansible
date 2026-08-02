@@ -18,11 +18,18 @@
 
 - name: ノードがReadyになるまで待機する
   block:
+    # jsonpath内のダブルクォートはcmdで書くとshlexに剥がされてしまうため、
+    # 分割されないargv形式で渡す。
     - name: ノードの状態を問い合わせる
       ansible.builtin.command:
-        cmd: >-
-          k3s kubectl get node {{ kubernetes_node_name_resolved }}
-          -o jsonpath={.status.conditions[?(@.type=="Ready")].status}
+        argv:
+          - k3s
+          - kubectl
+          - get
+          - node
+          - "{{ kubernetes_node_name_resolved }}"
+          - '-o'
+          - 'jsonpath={.status.conditions[?(@.type=="Ready")].status}'
       become: true
       delegate_to: "{{ kubernetes_check_host }}"
       register: kubernetes_node_ready
@@ -30,7 +37,6 @@
       delay: "{{ kubernetes_ready_delay }}"
       until: (kubernetes_node_ready.stdout | default('') | trim) == 'True'
       changed_when: false
-      failed_when: false
 
   rescue:
     - name: Readyにならなかったことを通知する

@@ -21,14 +21,14 @@ kubernetes:
       vm_cluster_ipv4: 10.10.20.11/24 # nic1(vmbr3)に付けるクラスタ占有ネットワーク
 
     # --- ワーカー ---
-    192.168.10.71:
-      vm_id: 1021
+    172.16.12.15:
+      vm_id: 301
       vm_name: k3s-worker01
-      vm_node: 192.168.10.11
+      vm_node: 172.16.11.13
       kubernetes_node_role: agent
-      vm_cluster_ipv4: 10.10.10.21/24
+      vm_cluster_ipv4: 10.10.20.15/24
 
-    192.168.10.72:
+    172.16.12.16:
       vm_id: 1022
       vm_name: k3s-worker02
       vm_node: 192.168.10.11
@@ -40,7 +40,7 @@ kubernetes:
     # ワーカーの参加先。コントロールプレーン自身にも渡るが、自分を指す値は
     # 「クラスタの1台目」として扱われるためグループ共通で書ける。
     # 指定できる項目は proxmox-vms/docs/kubernetes.md を参照。
-    kubernetes_server_ip: 172.16.12.11
+    kubernetes_server_ip: 10.10.20.11
     # kubernetes_version: v1.34.1+k3s1   # 未指定なら最新安定版
     # kubernetes_disable: [traefik]      # 標準コンポーネントの無効化
     # kubernetes_cluster_init: true      # HA構成にする予定があるなら1台目で有効化
@@ -71,10 +71,10 @@ kubernetes:
     # ノードごとに変える場合は hosts: の各VMの下に書けば個別に上書きできる。
     vm_hardware:
       cpu:
-        cores: 4
+        cores: 16
         type: x86-64-v3
       memory:
-        size: 4096
+        size: 12288
       options:
         bios: seabios
         machine: q35
@@ -89,7 +89,7 @@ kubernetes:
       resize:
         - bus: scsi
           index: 0
-          size: 32
+          size: 128
 
     # --- VMの動作設定(稼働中でも変更できる) ---
     vm_options:
