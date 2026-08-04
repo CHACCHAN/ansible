@@ -10,6 +10,9 @@
 | [development.yml](docs/development.md) | 開発専用VM(Cockpit/Docker/k8s CLI、任意でRDPデスクトップ) |
 | [authentik.yml](docs/authentik.md) | Authentik(SSO/IdP)をDocker Composeで構築 |
 | [kubernetes.yml](docs/kubernetes.md) | Kubernetes(k3s)のコントロールプレーン / ワーカーを構築 |
+| [technitium-dns.yml](docs/technitium-dns.md) | Technitium DNS ServerをDocker Composeで構築 |
+| [cloudflare-ddns-ui.yml](docs/cloudflare-ddns-ui.md) | cloudflare-ddns-ui(公開IPの変化をCloudflareのAレコードに反映)をDocker Composeで構築 |
+| [wg-easy.yml](docs/wg-easy.md) | wg-easy(WireGuardのVPNサーバー + Web UI。認証は既定でOIDC)をDocker Composeで構築 |
 
 ## 全playbook共通の指定
 ```sh
@@ -46,7 +49,7 @@ ansible-playbook playbooks/<playbook名>.yml -vv \
 | `configure_admin_group.yml` | SSHユーザーをsudoグループに追加 | 全ロール |
 | `install_base_packages.yml` | git, curl, nfs-common等 | 全ロール |
 | `install_qemu_guest_agent.yml` | QEMUゲストエージェント | 全ロール |
-| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 | `development` / `authentik` |
+| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 | `development` / `authentik` / `technitium` / `cloudflare_ddns_ui` / `wg_easy` |
 
 - `nfs-common` はどのVMからでもNFS共有をマウントできるよう基本パッケージに含めています
   (Kubernetesのnfs系ボリュームもノード側のこれを使います)

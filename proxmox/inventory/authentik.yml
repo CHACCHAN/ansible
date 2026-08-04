@@ -8,15 +8,15 @@
 ---
 authentik:
   hosts:
-    192.168.10.60:
-      vm_id: 1010
+    172.16.11.2:
+      vm_id: 502
       vm_name: authentik
-      vm_node: 192.168.10.11   # 構築先のProxmoxノード
+      vm_node: 172.16.11.15 # 構築先のProxmoxノード
 
   vars:
     # --- ネットワーク ---
-    vm_ipv4_prefix: 24         # ホスト名(IP)に付けるプレフィックス長
-    vm_ipv4_gw: 192.168.10.1
+    vm_ipv4_prefix: 24 # ホスト名(IP)に付けるプレフィックス長
+    vm_ipv4_gw: 172.16.11.1
 
     # 未指定だとProxmoxがホストのDNS設定を引き継ぐ。
     # ホストのDNSがVMから見えない場合は明示すること。
@@ -24,7 +24,7 @@ authentik:
     # vm_searchdomain: example.local
 
     # --- Proxmox側 ---
-    proxmox_storage: ssd01
+    proxmox_storage: local-lvm
 
     # --- VMのハードウェア(クローン直後・停止中に適用される) ---
     # Authentik公式の最小構成は2コア/4GB。ここでは余裕を持たせている。
@@ -32,10 +32,10 @@ authentik:
     # resize を省くとテンプレート素の約3GBのままになり、イメージが入らない。
     vm_hardware:
       cpu:
-        cores: 4
-        type: x86-64-v3
+        cores: 2
+        type: x86-64-v2-AES
       memory:
-        size: 8192
+        size: 4096
       options:
         bios: seabios
         machine: q35
@@ -43,17 +43,17 @@ authentik:
       resize:
         - bus: scsi
           index: 0
-          size: 64
+          size: 16
 
     # --- VMの動作設定(稼働中でも変更できる) ---
     vm_options:
-      agent: 1    # QEMUゲストエージェント(ゲスト側の導入はauthentikロールが行う)
-      onboot: 1   # 認証基盤が落ちたままにならないよう自動起動
+      agent: 1 # QEMUゲストエージェント(ゲスト側の導入はauthentikロールが行う)
+      onboot: 1 # 認証基盤が落ちたままにならないよう自動起動
 
     # --- VMのログイン設定 ---
     vm_ssh_user: authentik
-    vm_ssh_pubkey_file: ~/.ssh/id_ed25519_test.pub
-    vm_ssh_prikey: ~/.ssh/id_ed25519_test
+    vm_ssh_pubkey_file: ~/.ssh/id_ed25519_authentik.pub
+    vm_ssh_prikey: ~/.ssh/id_ed25519_authentik
 
     # --- Authentik本体の設定 ---
     # 指定できる項目は proxmox-vms/docs/authentik.md を参照。

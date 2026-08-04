@@ -10,5 +10,7 @@
       # NFSサーバー上の共有をどのVMからでもマウントできるようにする
       # (Kubernetesのnfs系ボリュームもノード側のこれを使う)
       - nfs-common
+      - tree
+      - htop
     state: present
   become: true

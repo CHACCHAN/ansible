@@ -19,6 +19,9 @@
 | [development.yml](docs/development.md) | 開発専用VMを構築する(テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init設定 → 起動 → VM内セットアップ) |
 | [authentik.yml](docs/authentik.md) | Authentik(SSO/IdP)のVMを構築する(上と同じ流れ + VM内でDocker ComposeによるAuthentik構築) |
 | [kubernetes.yml](docs/kubernetes.md) | Kubernetes(k3s)のクラスタを構築する(上と同じ流れ + VM内でk3s導入とクラスタへの参加) |
+| [technitium-dns.yml](docs/technitium-dns.md) | DNSサーバー(Technitium)のVMを構築する(上と同じ流れ + VM内でDocker ComposeによるDNSサーバー構築) |
+| [cloudflare-ddns-ui.yml](docs/cloudflare-ddns-ui.md) | DDNS更新(cloudflare-ddns-ui)のVMを構築する(上と同じ流れ + VM内でDocker ComposeによるDDNS更新サービス構築) |
+| [wg-easy.yml](docs/wg-easy.md) | VPN(wg-easy)のVMを構築する(上と同じ流れ + VM内でDocker ComposeによるWireGuard構築) |
 
 いずれも構築の流れは同じで、最後に呼ぶ `proxmox-vms/` のplaybookだけが違います。
 `kubernetes.yml` だけは、最後のVM内セットアップを
@@ -32,10 +35,17 @@
 
 ```
 inventory/
-  development.yml   # playbooks/development.yml 用(グループ: development)
-  authentik.yml     # playbooks/authentik.yml 用(グループ: authentik)
-  kubernetes.yml    # playbooks/kubernetes.yml 用(グループ: kubernetes)
+  development.yml     # playbooks/development.yml 用(グループ: development)
+  authentik.yml       # playbooks/authentik.yml 用(グループ: authentik)
+  kubernetes.yml      # playbooks/kubernetes.yml 用(グループ: kubernetes)
+  technitium-dns.yml  # playbooks/technitium-dns.yml 用(グループ: technitium_dns)
+  cloudflare-ddns-ui.yml # playbooks/cloudflare-ddns-ui.yml 用(グループ: cloudflare_ddns_ui)
+  wg-easy.yml         # playbooks/wg-easy.yml 用(グループ: wg_easy)
 ```
+
+- ⚠ **グループ名にハイフンは使えません**(Ansibleが警告を出します)。
+  playbook名にハイフンが入る場合だけ、グループ名はアンダースコアにしてください
+  (`technitium-dns.yml` → グループ `technitium_dns`)
 
 - ホスト名は**構築するVMのIPアドレス**です。VMごとの値(VMID・VM名・構築先ノード)は
   `hosts:` 配下に、共通の値は `vars:` に書きます

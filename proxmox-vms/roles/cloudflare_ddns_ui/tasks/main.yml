@@ -1,0 +1,50 @@
+# Docker Composeでcloudflare-ddns-ui(martijnf/cloudflare-ddns-ui)を構築する。Debian専用。
+# 全VM共通の処理は proxmox-vms/tasks/ 配下(= ../../../tasks/)と共有している。
+#
+# 公開IPが変わったときにCloudflareのAレコードを更新し続ける常駐サービス。
+# ダッシュボード付きで、設定は config/config.json ひとつにまとまっている。
+---
+- name: 対象OSを確認する
+  ansible.builtin.import_tasks: ../../../tasks/assert_debian.yml
+
+- name: 必須変数を検証する
+  ansible.builtin.import_tasks: validate.yml
+
+- name: OS/パッケージを更新する
+  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
+
+- name: タイムゾーンを設定する
+  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
+
+- name: ロケールを設定する
+  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
+
+- name: スワップ(zram)を設定する
+  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
+
+- name: SSHユーザーを管理者グループに追加する
+  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
+
+- name: 基本パッケージをインストールする
+  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
+
+- name: QEMUゲストエージェントを導入する
+  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
+
+- name: Dockerをインストールする
+  ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
+
+- name: Cloudflare-ddns-ui用のディレクトリを準備する
+  ansible.builtin.import_tasks: prepare_directories.yml
+
+- name: 設定(config.json)を配置する
+  ansible.builtin.import_tasks: configure_settings.yml
+
+- name: Cloudflare-ddns-uiのコンテナを起動する
+  ansible.builtin.import_tasks: deploy_compose.yml
+
+- name: Web UIのポートを開放する
+  ansible.builtin.import_tasks: configure_firewall.yml
+
+- name: Web UIとレコードの更新結果を確認する
+  ansible.builtin.import_tasks: verify_service.yml

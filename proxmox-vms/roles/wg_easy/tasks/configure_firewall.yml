@@ -1,0 +1,38 @@
+# Debianのcloud imageは既定でufw未導入のため通常はスキップされる。
+# 利用者が後からufwを有効にしていた場合のみポートを開ける(導入も有効化もしない)。
+#
+# なお、Dockerが公開したポートはufwのINPUTを通らないため、ここで開けなくても
+# 外から繋がる。ufw運用のVMで設定が食い違って見えないように揃えているだけ。
+#
+# WireGuard(UDP)は外部から届く必要があるため常に開ける。
+# Web UIは待ち受けを127.0.0.1に絞っている場合はVMの外に出ないため開けない。
+---
+- name: Ufwが導入されているか確認する
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: wg_easy_ufw_bin
+
+- name: Ufwが有効になっているか確認する
+  ansible.builtin.command:
+    cmd: ufw status
+  become: true
+  changed_when: false
+  failed_when: false
+  register: wg_easy_ufw_status
+  when: wg_easy_ufw_bin.stat.exists
+
+- name: "Wg-easyが使うポートをufwで開放する: {{ item.port ~ '/' ~ item.proto }}"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  become: true
+  loop: >-
+    {{ [{'port': wg_easy_wg_port, 'proto': 'udp'}]
+       + ([{'port': wg_easy_ui_port, 'proto': 'tcp'}]
+          if (wg_easy_published | bool) else []) }}
+  loop_control:
+    label: "{{ item.port ~ '/' ~ item.proto }}"
+  when:
+    - wg_easy_ufw_bin.stat.exists
+    - "'Status: active' in (wg_easy_ufw_status.stdout | default(''))"
