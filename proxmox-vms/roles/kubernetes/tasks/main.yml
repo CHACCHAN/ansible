@@ -10,32 +10,15 @@
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
-- name: OS/パッケージを更新する
-  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
-
-- name: タイムゾーンを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
-
-- name: ロケールを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
-
 # Kubernetesはswapが無い前提のため、既定では共通タスクのzramではなく無効化を行う
 - name: スワップを無効化する
   ansible.builtin.import_tasks: disable_swap.yml
   when: kubernetes_disable_swap | bool
 
-- name: スワップ(zram)を設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
-  when: not (kubernetes_disable_swap | bool)
-
-- name: SSHユーザーを管理者グループに追加する
-  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
-
-- name: 基本パッケージをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
-
-- name: QEMUゲストエージェントを導入する
-  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
+- name: VM共通の初期セットアップを実行する
+  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
+  vars:
+    svc_configure_swap: "{{ not (kubernetes_disable_swap | bool) }}"
 
 - name: K3sノードに必要なパッケージをインストールする
   ansible.builtin.import_tasks: install_prerequisites.yml
@@ -63,5 +46,17 @@
   ansible.builtin.import_tasks: configure_kubeconfig.yml
   when: kubernetes_role_resolved == 'server'
 
+# 開けるポートは公式の「Networking / Inbound Rules」に合わせている。
+# https://docs.k3s.io/installation/requirements#inbound-rules-for-k3s-nodes
 - name: K3sが使うポートを開放する
-  ansible.builtin.import_tasks: configure_firewall.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_ufw_ports.yml
+  vars:
+    svc_ufw_ports: >-
+      {{ [{'port': 8472, 'proto': 'udp'},
+          {'port': 10250, 'proto': 'tcp'}]
+         + ([{'port': kubernetes_server_port, 'proto': 'tcp'}]
+            if kubernetes_role_resolved == 'server' else [])
+         + ([{'port': 2379, 'proto': 'tcp'}, {'port': 2380, 'proto': 'tcp'}]
+            if (kubernetes_role_resolved == 'server'
+                and ((kubernetes_cluster_init | bool) or (kubernetes_join_existing | bool)))
+            else []) }}

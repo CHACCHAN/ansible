@@ -53,6 +53,7 @@ Debianのcloud imageテンプレートは素のままだと約3GBしかないた
 | `technitium_log_using_local_time` | `true` | ログの時刻をローカルタイムにするか(**初回のみ有効**) |
 | `technitium_log_max_days` | `365` | ログの保持日数(**初回のみ有効**) |
 | `technitium_min_free_disk_gb` | `3` | イメージ取得前に必要な空き容量(GiB) |
+| `technitium_extra_env` | `{}` | 上に無い環境変数を `.env` に足す(**初回のみ有効**) |
 | `technitium_ready_retries` / `_delay` | `30` / `5` | Webコンソール起動待ちのリトライ回数 / 間隔(秒) |
 
 パスワードを手動指定する場合は**16文字以上の英数字と `_` `.` `-` のみ**にしてください

@@ -60,6 +60,7 @@ TTLやプロキシを制御したい、IPv6も更新したい、といった場�
 | `cloudflare_ddns_ui_http_bind` | `0.0.0.0` | ダッシュボードの待ち受けアドレス(後述) |
 | `cloudflare_ddns_ui_interval` | `300` | 公開IPを確認してレコードを更新する間隔(秒) |
 | `cloudflare_ddns_ui_refresh` | `30` | ダッシュボードの自動リロード間隔(秒) |
+| `cloudflare_ddns_ui_extra_env` | `{}` | コンテナに渡す環境変数を足す(`TZ` はVMのタイムゾーンから自動設定) |
 | `cloudflare_ddns_ui_ready_retries` / `_delay` | `30` / `5` | ダッシュボード起動待ちのリトライ回数 / 間隔(秒) |
 | `cloudflare_ddns_ui_check_retries` / `_delay` | `12` / `5` | 1回目のレコード確認を待つリトライ回数 / 間隔(秒) |
 

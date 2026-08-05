@@ -14,6 +14,9 @@ services:
     restart: unless-stopped
     environment:
       TZ: {{ vm_timezone_resolved | default('Asia/Tokyo', true) }}
+{% for key, value in (cloudflare_ddns_ui_extra_env | dictsort) %}
+      {{ key }}: {{ value | to_json }}
+{% endfor %}
     ports:
 {% if cloudflare_ddns_ui_http_bind in ['0.0.0.0', '::', ''] %}
       - "{{ cloudflare_ddns_ui_http_port }}:8080/tcp"

@@ -29,11 +29,11 @@ kubernetes:
       vm_cluster_ipv4: 10.10.20.15/24
 
     172.16.12.16:
-      vm_id: 1022
+      vm_id: 401
       vm_name: k3s-worker02
-      vm_node: 192.168.10.11
+      vm_node: 172.16.11.14
       kubernetes_node_role: agent
-      vm_cluster_ipv4: 10.10.10.22/24
+      vm_cluster_ipv4: 10.10.20.16/24
 
   vars:
     # --- k3s ---
@@ -71,10 +71,10 @@ kubernetes:
     # ノードごとに変える場合は hosts: の各VMの下に書けば個別に上書きできる。
     vm_hardware:
       cpu:
-        cores: 16
+        cores: 12
         type: x86-64-v3
       memory:
-        size: 12288
+        size: 16384
       options:
         bios: seabios
         machine: q35

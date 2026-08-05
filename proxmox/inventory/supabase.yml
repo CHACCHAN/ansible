@@ -1,0 +1,82 @@
+# playbooks/supabase.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
+#
+#   全台: ansible-playbook playbooks/supabase.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/supabase.yml --ask-vault-pass --limit 172.16.11.6
+#
+# パスワードとAPIキーはVM内で自動生成され、VM内の .env に保存される
+# (このファイルにも vault にも秘密情報は置かない)。
+---
+supabase:
+  hosts:
+    172.16.11.6:
+      vm_id: 402
+      vm_name: supabase
+      vm_node: 172.16.11.14 # 構築先のProxmoxノード
+
+  vars:
+    # --- ネットワーク ---
+    vm_ipv4_prefix: 24 # ホスト名(IP)に付けるプレフィックス長
+    vm_ipv4_gw: 172.16.11.1
+
+    # 未指定だとProxmoxがホストのDNS設定を引き継ぐ。
+    # ホストのDNSがVMから見えない場合は明示すること。
+    # vm_nameserver: 172.16.11.3
+    # vm_searchdomain: example.local
+
+    # --- Proxmox側 ---
+    proxmox_storage: ssd02
+
+    # --- VMのハードウェア(クローン直後・停止中に適用される) ---
+    # 11個のコンテナ(Postgres含む)が常駐するため、公式の推奨に沿って余裕を持たせる。
+    # ディスクは resize で拡張する(disks だと新しい空ディスクに置き換わる)。
+    # イメージだけで数GiB使うため、resize を省くと空き容量チェックで中止する。
+    vm_hardware:
+      cpu:
+        cores: 12
+        type: x86-64-v3
+      memory:
+        size: 8192
+      options:
+        bios: seabios
+        machine: q35
+        vga: std
+      resize:
+        - bus: scsi
+          index: 0
+          size: 480
+
+    # --- VMの動作設定(稼働中でも変更できる) ---
+    vm_options:
+      agent: 1 # QEMUゲストエージェント(ゲスト側の導入はsupabaseロールが行う)
+      onboot: 1 # DBを含むため自動起動
+
+    # --- VMのログイン設定 ---
+    vm_ssh_user: supabase
+    vm_ssh_pubkey_file: ~/.ssh/id_ed25519_supabase.pub
+    vm_ssh_prikey: ~/.ssh/id_ed25519_supabase
+
+    # --- Supabase本体の設定 ---
+    # .env に入る値はすべて変数で指定できる(一覧は proxmox-vms/docs/supabase.md)。
+    # パスワード・APIキーは未指定なら公式スクリプトで自動生成され、
+    # 再実行でも作り直されない(VM内の .env から引き継ぐ)。
+    #
+    # ブラウザやアプリから見たURL。未指定ならVMのIPとKongのポートから組み立てる。
+    # リバースプロキシ経由で使う場合は必ず指定すること(認証メールのリンクにも使われる)
+    # supabase_public_url: https://supabase.cc-chacchan.com
+    # supabase_site_url: https://app.cc-chacchan.com
+
+    # 取得する公式構成のリビジョン(イメージのタグはこの中で固定されている)。
+    # 上げるときは公式のCHANGELOGを確認してから変更すること
+    # supabase_ref: master
+
+    # 使うcompose定義(ログ収集やHTTPS化を足す場合)
+    # supabase_compose_files:
+    #   - docker-compose.yml
+    #   - docker-compose.logs.yml
+
+    # supabase_kong_http_port: 8000       # API + ダッシュボード
+    # supabase_postgres_port: 5432        # Postgres(セッションモード)
+    # supabase_pooler_proxy_port_transaction: 6543
+    # メールを送れない環境では、確認メール無しでユーザーを有効化する
+    # supabase_enable_email_autoconfirm: true

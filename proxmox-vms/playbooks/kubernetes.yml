@@ -70,11 +70,7 @@
   # k3sはsystemdで自動起動するので、再起動後に復帰することまで確認する。
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.reboot:
-        msg: Ansibleによる構成変更を反映するため再起動します
-        reboot_timeout: 600
-      become: true
-      when: vm_reboot_after_setup | default(true) | bool
+      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
 
     - name: 再起動後にk3sサービスが復帰することを確認する
       ansible.builtin.systemd:

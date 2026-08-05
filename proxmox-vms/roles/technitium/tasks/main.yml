@@ -9,31 +9,17 @@
 
 # パッケージ更新やイメージ取得の途中で容量が尽きると原因が分かりにくいため先に確認する
 - name: ディスクの空き容量を確認する
-  ansible.builtin.import_tasks: check_disk_space.yml
+  ansible.builtin.import_tasks: ../../../tasks/check_disk_space.yml
+  vars:
+    svc_name: Technitium
+    svc_min_free_gb: "{{ technitium_min_free_disk_gb }}"
+    svc_min_free_var: technitium_min_free_disk_gb
 
-- name: OS/パッケージを更新する
-  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
-
-- name: タイムゾーンを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
-
-- name: ロケールを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
-
-- name: スワップ(zram)を設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
-
-- name: SSHユーザーを管理者グループに追加する
-  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
-
-- name: 基本パッケージをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
+- name: VM共通の初期セットアップを実行する
+  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
 
 - name: DNSの動作確認に使うコマンドを導入する
   ansible.builtin.import_tasks: install_dns_tools.yml
-
-- name: QEMUゲストエージェントを導入する
-  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
 
 - name: Dockerをインストールする
   ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
@@ -49,10 +35,22 @@
   ansible.builtin.import_tasks: configure_env.yml
 
 - name: Technitiumのコンテナを起動する
-  ansible.builtin.import_tasks: deploy_compose.yml
+  ansible.builtin.import_tasks: ../../../tasks/deploy_compose.yml
+  vars:
+    svc_name: Technitium
+    svc_install_dir: "{{ technitium_install_dir }}"
+    svc_config_changed: "{{ technitium_env_file is changed }}"
 
 - name: DNSとWebコンソールのポートを開放する
-  ansible.builtin.import_tasks: configure_firewall.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_ufw_ports.yml
+  vars:
+    svc_ufw_ports: >-
+      {{ [{'port': technitium_dns_port, 'proto': 'udp'},
+          {'port': technitium_dns_port, 'proto': 'tcp'},
+          {'port': technitium_http_port, 'proto': 'tcp'}]
+         + ([{'port': technitium_https_port, 'proto': 'tcp'}]
+            if (technitium_enable_https_console | bool) else [])
+         + technitium_extra_ports }}
 
 - name: 名前解決とWebコンソールが応答することを確認する
   ansible.builtin.import_tasks: verify_service.yml

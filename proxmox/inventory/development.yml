@@ -12,17 +12,22 @@ development:
     192.168.10.21:
       vm_id: 1001
       vm_name: yuya-dev
-      vm_node: 192.168.10.11   # 構築先のProxmoxノード
+      vm_node: 192.168.10.11 # 構築先のProxmoxノード
 
     192.168.10.22:
       vm_id: 1002
       vm_name: shun-dev
       vm_node: 192.168.10.11
 
+    172.16.11.70:
+      vm_id: 155
+      vm_name: test-dev
+      vm_node: 172.16.11.11
+
   vars:
     # --- ネットワーク ---
-    vm_ipv4_prefix: 24         # ホスト名(IP)に付けるプレフィックス長
-    vm_ipv4_gw: 192.168.10.1
+    vm_ipv4_prefix: 24 # ホスト名(IP)に付けるプレフィックス長
+    vm_ipv4_gw: 172.16.11.1
 
     # 未指定だとProxmoxがホストのDNS設定を引き継ぐ。
     # ホストのDNSがVMから見えない場合は明示すること。
@@ -38,10 +43,10 @@ development:
     # ディスクは resize で拡張する(disks だと新しい空ディスクに置き換わる)。
     vm_hardware:
       cpu:
-        cores: 8
+        cores: 4
         type: host
       memory:
-        size: 8192
+        size: 4096
       options:
         bios: seabios
         machine: q35
@@ -49,12 +54,12 @@ development:
       resize:
         - bus: scsi
           index: 0
-          size: 256
+          size: 64
 
     # --- VMの動作設定(稼働中でも変更できる) ---
     vm_options:
-      agent: 1    # QEMUゲストエージェント(ゲスト側の導入はdevelopmentロールが行う)
-      onboot: 1   # Proxmoxホスト起動時にVMを自動起動
+      agent: 1 # QEMUゲストエージェント(ゲスト側の導入はdevelopmentロールが行う)
+      onboot: 1 # Proxmoxホスト起動時にVMを自動起動
 
     # --- VMのログイン設定 ---
     # SSH・cockpit・RDPで共通のログインユーザー
@@ -62,5 +67,5 @@ development:
 
     # コントロールノード側のパス。公開鍵は内容を直接渡すこともできる
     # (-e "vm_ssh_pubkey='ssh-ed25519 ...'")
-    vm_ssh_pubkey_file: ~/.ssh/id_ed25519_test.pub
-    vm_ssh_prikey: ~/.ssh/id_ed25519_test
+    vm_ssh_pubkey_file: ~/.ssh/id_ed25519_test_dev.pub
+    vm_ssh_prikey: ~/.ssh/id_ed25519_test_dev

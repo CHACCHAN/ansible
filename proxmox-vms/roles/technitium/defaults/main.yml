@@ -45,6 +45,11 @@ technitium_block_list_urls: []
 technitium_log_using_local_time: true
 technitium_log_max_days: 365
 
+# 上記以外の環境変数を .env に追記する場合に使う(初回起動時のみ反映される)。
+# 例: {"DNS_SERVER_PREFER_IPV6": "true"}
+# 指定できる項目: https://hub.docker.com/r/technitium/dns-server
+technitium_extra_env: {}
+
 # イメージ取得前に必要とする空き容量(GiB)
 technitium_min_free_disk_gb: 3
 

@@ -13,6 +13,7 @@
 | [technitium-dns.yml](docs/technitium-dns.md) | Technitium DNS ServerをDocker Composeで構築 |
 | [cloudflare-ddns-ui.yml](docs/cloudflare-ddns-ui.md) | cloudflare-ddns-ui(公開IPの変化をCloudflareのAレコードに反映)をDocker Composeで構築 |
 | [wg-easy.yml](docs/wg-easy.md) | wg-easy(WireGuardのVPNサーバー + Web UI。認証は既定でOIDC)をDocker Composeで構築 |
+| [supabase.yml](docs/supabase.md) | Supabase(セルフホスト。Postgres + API + 認証 + Studio)をDocker Composeで構築 |
 
 ## 全playbook共通の指定
 ```sh
@@ -36,20 +37,29 @@ ansible-playbook playbooks/<playbook名>.yml -vv \
 
 ## 共通セットアップ(tasks/)
 複数のロールで使う処理は `tasks/` 配下に置いて共有しています。
-**どれを使うかは各ロールが選びます**(例: Dockerは`development`と`authentik`だけ。
+**どれを使うかは各ロールが選びます**(例: Dockerは`kubernetes`以外の全ロール。
 `kubernetes`はk3s同梱のcontainerdを使うため入れません)。
 
 | ファイル | 内容 | 使うロール |
 | --- | --- | --- |
 | `register-vm-host.yml` | 接続先VMの登録とSSH疎通確認 | 全playbook |
 | `assert_debian.yml` | 対象OSがDebianであることの確認 | 全ロール |
-| `update_packages.yml` | apt update && upgrade | 全ロール |
-| `configure_timezone.yml` / `configure_locale.yml` | タイムゾーン / ロケール | 全ロール |
-| `configure_swap.yml` | zramによる動的swap | 全ロール(`kubernetes`は既定で無効化) |
-| `configure_admin_group.yml` | SSHユーザーをsudoグループに追加 | 全ロール |
-| `install_base_packages.yml` | git, curl, nfs-common等 | 全ロール |
-| `install_qemu_guest_agent.yml` | QEMUゲストエージェント | 全ロール |
-| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 | `development` / `authentik` / `technitium` / `cloudflare_ddns_ui` / `wg_easy` |
+| `setup_standard_vm.yml` | 共通初期セットアップ一式。下の7ファイルを順番に実行する | 全ロール |
+| ├ `update_packages.yml` | apt update && upgrade | 〃 |
+| ├ `configure_timezone.yml` / `configure_locale.yml` | タイムゾーン / ロケール | 〃 |
+| ├ `configure_swap.yml` | zramによる動的swap | 〃(`kubernetes`は既定で無効化) |
+| ├ `configure_admin_group.yml` | SSHユーザーをsudoグループに追加 | 〃 |
+| ├ `install_base_packages.yml` | git, curl, nfs-common等 | 〃 |
+| └ `install_qemu_guest_agent.yml` | QEMUゲストエージェント | 〃 |
+| `install_docker.yml` | Docker(compose込み)とdockerグループ追加 | `kubernetes` 以外の全ロール |
+| `check_disk_space.yml` | イメージ取得前の空き容量チェック(不足なら中止) | `authentik` / `technitium` / `supabase` |
+| `configure_ufw_ports.yml` | ufwが有効な場合のみサービスのポートを開放 | `development` 以外の全ロール |
+| `deploy_compose.yml` | compose定義(テンプレート)の配置とコンテナ起動 | `authentik` / `technitium` / `cloudflare_ddns_ui` / `wg_easy` |
+| `load_existing_env.yml` | 既存 `.env` の読み込み(パスワード等の引き継ぎ用) | `authentik` / `technitium` / `wg_easy` |
+| `reboot_vm.yml` | 構成反映のためのVM再起動 | 全playbook |
+
+- `setup_standard_vm.yml` 内の個別タスクは単体でも import できます。
+  サービス固有の値(対象ディレクトリ・ポート等)は import 時の `vars:`(`svc_` 接頭辞)で渡します
 
 - `nfs-common` はどのVMからでもNFS共有をマウントできるよう基本パッケージに含めています
   (Kubernetesのnfs系ボリュームもノード側のこれを使います)

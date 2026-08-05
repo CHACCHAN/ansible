@@ -5,29 +5,17 @@
 #
 # 秘密情報を扱うタスクはno_logで出力を抑止している(失敗しても詳細は出ない)。
 ---
-- name: 既存の.envファイルの有無を確認する
-  ansible.builtin.stat:
-    path: "{{ technitium_install_dir }}/.env"
-  become: true
-  register: technitium_env_stat
-
 - name: 既存の.envファイルを読み込む
-  ansible.builtin.slurp:
-    src: "{{ technitium_install_dir }}/.env"
-  become: true
-  register: technitium_env_slurp
-  when: technitium_env_stat.stat.exists
-  no_log: true
+  ansible.builtin.import_tasks: ../../../tasks/load_existing_env.yml
+  vars:
+    svc_env_path: "{{ technitium_install_dir }}/.env"
 
 - name: 既存の.envから引き継ぐ値を取り出す
   ansible.builtin.set_fact:
     technitium_env_admin_password: >-
-      {{ (technitium_env_content
+      {{ (vm_existing_env
           | regex_search('^DNS_SERVER_ADMIN_PASSWORD=(.*)$', '\1', multiline=True)
           | default([], true)) | join('') }}
-  vars:
-    technitium_env_content: >-
-      {{ (technitium_env_slurp.content | b64decode) if technitium_env_stat.stat.exists else '' }}
   no_log: true
 
 - name: 使用する管理者パスワードを決定する

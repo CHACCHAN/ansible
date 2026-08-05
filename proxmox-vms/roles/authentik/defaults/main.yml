@@ -27,5 +27,10 @@ authentik_min_free_disk_gb: 5
 authentik_ready_retries: 60
 authentik_ready_delay: 10
 
+# 上記以外の環境変数を .env に追記する場合に使う。
+# 例: {"AUTHENTIK_EMAIL__HOST": "smtp.example.com", "AUTHENTIK_EMAIL__PORT": "587"}
+# 指定できる項目: https://docs.goauthentik.io/install-config/configuration/
+authentik_extra_env: {}
+
 # 既定値なし: authentik_pg_password / authentik_secret_key(未指定なら自動生成)、
 #             authentik_bootstrap_password / _email / _token(未指定なら設定しない)

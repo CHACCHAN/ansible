@@ -9,28 +9,14 @@
 
 # パッケージ更新やイメージ取得の途中で容量が尽きると原因が分かりにくいため先に確認する
 - name: ディスクの空き容量を確認する
-  ansible.builtin.import_tasks: check_disk_space.yml
+  ansible.builtin.import_tasks: ../../../tasks/check_disk_space.yml
+  vars:
+    svc_name: Authentik
+    svc_min_free_gb: "{{ authentik_min_free_disk_gb }}"
+    svc_min_free_var: authentik_min_free_disk_gb
 
-- name: OS/パッケージを更新する
-  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
-
-- name: タイムゾーンを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
-
-- name: ロケールを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
-
-- name: スワップ(zram)を設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
-
-- name: SSHユーザーを管理者グループに追加する
-  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
-
-- name: 基本パッケージをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
-
-- name: QEMUゲストエージェントを導入する
-  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
+- name: VM共通の初期セットアップを実行する
+  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
 
 - name: Dockerをインストールする
   ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
@@ -42,10 +28,18 @@
   ansible.builtin.import_tasks: configure_env.yml
 
 - name: Authentikのコンテナを起動する
-  ansible.builtin.import_tasks: deploy_compose.yml
+  ansible.builtin.import_tasks: ../../../tasks/deploy_compose.yml
+  vars:
+    svc_name: Authentik
+    svc_install_dir: "{{ authentik_install_dir }}"
+    svc_config_changed: "{{ authentik_env_file is changed }}"
 
 - name: WebUIのポートを開放する
-  ansible.builtin.import_tasks: configure_firewall.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_ufw_ports.yml
+  vars:
+    svc_ufw_ports:
+      - { port: "{{ authentik_http_port }}", proto: tcp }
+      - { port: "{{ authentik_https_port }}", proto: tcp }
 
 - name: WebUIが応答することを確認する
   ansible.builtin.import_tasks: verify_service.yml

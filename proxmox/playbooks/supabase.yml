@@ -1,22 +1,25 @@
-# DNSサーバーのVMを、テンプレート構築からVM内部のセットアップまで一気通貫で構築します。
+# Supabase(セルフホスト)のVMを、テンプレート構築からVM内部のセットアップまで
+# 一気通貫で構築します。
 # 処理は自前で持たず、共通フロー(../tasks/ と _provision_vm.yml)を通じて
 # proxmox-hosts / proxmox-vms のplaybookを順番に呼ぶだけです。
 #
 # 対象の決め方は2通り(以降の処理は共通で、対象は pv_targets に集約されます):
-#   インベントリ版(既定)  : ../inventory/technitium-dns.yml のホスト。--limit で選択
+#   インベントリ版(既定)  : ../inventory/supabase.yml のホスト。--limit で選択
 #   手動指定版(manual=true): -e で指定した1台のみ(インベントリが空なら自動でこちら)
 #
-# 共通フローで使う変数は pv_ 接頭辞(provision)にしています。DNSサーバー本体の設定は
-# technitium_ 接頭辞でそのまま最後の手順へ渡るため、名前が混ざらないよう分けています。
+# 共通フローで使う変数は pv_ 接頭辞(provision)にしています。Supabase本体の設定は
+# supabase_ 接頭辞でそのまま最後の手順へ渡るため、名前が混ざらないよう分けています。
+#
+# Supabaseのパスワードとキーは公式スクリプトで自動生成され、VM内の .env に保存される。
+# そのため、ここで渡す秘密情報はない(vaultも増やしていない)
 ---
 - name: インベントリから構築対象を選ぶ
-  # グループ名にはハイフンを使えないため、ここだけ technitium_dns(アンダースコア)です
-  hosts: technitium_dns
+  hosts: supabase
   gather_facts: false
   connection: local
 
   vars:
-    pv_group: technitium_dns
+    pv_group: supabase
 
   tasks:
     - name: インベントリのホストを構築対象に加える
@@ -28,7 +31,7 @@
   connection: local
 
   vars:
-    pv_group: technitium_dns
+    pv_group: supabase
 
   tasks:
     - name: 手動指定されたVMを構築対象に加える
@@ -45,13 +48,16 @@
 
   vars:
     pv_service_summary: >-
-      DNS {{ pv_vm_ip }}:{{ technitium_dns_port | default(53) }}
-      / Webコンソール http://{{ pv_vm_ip }}:{{ technitium_http_port | default(5380) }}/
+      公開URL {{ supabase_public_url
+                 | default('http://' ~ pv_vm_ip ~ ':'
+                           ~ (supabase_kong_http_port | default(8000) | string), true) }}
+      / Postgres {{ pv_vm_ip }}:{{ supabase_postgres_port | default(5432) }}
+      / 取得元 {{ supabase_ref | default('(ロールの既定)', true) }}
     pv_resize_hint_reason: >-
-      Technitiumのコンテナイメージ(展開後およそ0.7GiB)とクエリログの
-      置き場所が足りなくなる可能性があります。
+      Supabaseは11個のコンテナで構成され、イメージだけで数GiB必要なため、
+      VM内セットアップの空き容量チェックで中止することになります。
     pv_resize_example: >-
-      vm_hardware={"cpu":{"cores":2,"type":"host"},"memory":{"size":2048},"resize":[{"bus":"scsi","index":0,"size":16}]}
+      vm_hardware={"cpu":{"cores":4,"type":"host"},"memory":{"size":8192},"resize":[{"bus":"scsi","index":0,"size":48}]}
 
   tasks:
     - name: インベントリと-eの値から構築内容を決定する
@@ -65,9 +71,9 @@
   ansible.builtin.import_playbook: _provision_vm.yml
 
 # VM内部のセットアップ。
-# DNSサーバー本体の設定(technitium_version等)はインベントリや-eの値がそのまま渡る。
+# Supabase本体の設定(supabase_public_url等)はインベントリや-eの値がそのまま渡る。
 - name: VM内部をセットアップする
-  ansible.builtin.import_playbook: ../../proxmox-vms/playbooks/technitium-dns.yml
+  ansible.builtin.import_playbook: ../../proxmox-vms/playbooks/supabase.yml
   vars:
     # 呼び出し先のlocalhostプレイでも参照されるため、
     # 各VMでは自分の値、localhostでは登録済みホストの先頭の値を使う

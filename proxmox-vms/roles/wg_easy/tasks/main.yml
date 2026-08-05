@@ -9,26 +9,8 @@
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
-- name: OS/パッケージを更新する
-  ansible.builtin.import_tasks: ../../../tasks/update_packages.yml
-
-- name: タイムゾーンを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_timezone.yml
-
-- name: ロケールを設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_locale.yml
-
-- name: スワップ(zram)を設定する
-  ansible.builtin.import_tasks: ../../../tasks/configure_swap.yml
-
-- name: SSHユーザーを管理者グループに追加する
-  ansible.builtin.import_tasks: ../../../tasks/configure_admin_group.yml
-
-- name: 基本パッケージをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_base_packages.yml
-
-- name: QEMUゲストエージェントを導入する
-  ansible.builtin.import_tasks: ../../../tasks/install_qemu_guest_agent.yml
+- name: VM共通の初期セットアップを実行する
+  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
 
 - name: Dockerをインストールする
   ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
@@ -40,10 +22,21 @@
   ansible.builtin.import_tasks: configure_env.yml
 
 - name: Wg-easyのコンテナを起動する
-  ansible.builtin.import_tasks: deploy_compose.yml
+  ansible.builtin.import_tasks: ../../../tasks/deploy_compose.yml
+  vars:
+    svc_name: Wg-easy
+    svc_install_dir: "{{ wg_easy_install_dir }}"
+    svc_config_changed: "{{ wg_easy_env_file is changed }}"
 
+# WireGuard(UDP)は外部から届く必要があるため常に開ける。
+# Web UIは待ち受けを127.0.0.1に絞っている場合はVMの外に出ないため開けない
 - name: WireGuardとWeb UIのポートを開放する
-  ansible.builtin.import_tasks: configure_firewall.yml
+  ansible.builtin.import_tasks: ../../../tasks/configure_ufw_ports.yml
+  vars:
+    svc_ufw_ports: >-
+      {{ [{'port': wg_easy_wg_port, 'proto': 'udp'}]
+         + ([{'port': wg_easy_ui_port, 'proto': 'tcp'}]
+            if (wg_easy_published | bool) else []) }}
 
 - name: Web UIとWireGuardの状態を確認する
   ansible.builtin.import_tasks: verify_service.yml

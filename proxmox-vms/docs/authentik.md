@@ -46,6 +46,7 @@ Debianのcloud imageテンプレートは素のままだと約3GBしかないた
 | `authentik_bootstrap_token` | (未設定) | 初期管理者のAPIトークン(**初回のみ有効**) |
 | `authentik_error_reporting` | `false` | エラー情報をauthentik側へ送信するか |
 | `authentik_min_free_disk_gb` | `5` | イメージ取得前に必要な空き容量(GiB) |
+| `authentik_extra_env` | `{}` | 上に無い環境変数を `.env` に足す(例: SMTP設定の `AUTHENTIK_EMAIL__*`) |
 | `authentik_ready_retries` / `_delay` | `60` / `10` | WebUI起動待ちのリトライ回数 / 間隔(秒) |
 
 パスワード類を手動指定する場合は**16文字以上の英数字と `_` `.` `-` のみ**にしてください

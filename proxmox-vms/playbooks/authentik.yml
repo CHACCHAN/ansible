@@ -22,11 +22,7 @@
   # 最後に「実行元の端末から」WebUIが見えることまで確認する。
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.reboot:
-        msg: Ansibleによる構成変更を反映するため再起動します
-        reboot_timeout: 600
-      become: true
-      when: vm_reboot_after_setup | default(true) | bool
+      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
 
     - name: 実行元の端末からWebUIに接続できることを確認する
       ansible.builtin.uri:

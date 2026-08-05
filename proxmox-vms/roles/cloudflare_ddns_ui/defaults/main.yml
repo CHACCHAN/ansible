@@ -40,6 +40,10 @@ cloudflare_ddns_ui_interval: 300
 # ダッシュボードの自動リロード間隔(秒)
 cloudflare_ddns_ui_refresh: 30
 
+# コンテナに渡す環境変数を追加する場合に使う(TZはVMのタイムゾーンから自動設定)。
+# 例: {"LOG_LEVEL": "debug"}
+cloudflare_ddns_ui_extra_env: {}
+
 # Web UIの起動待ち(リトライ回数 / 間隔(秒))
 cloudflare_ddns_ui_ready_retries: 30
 cloudflare_ddns_ui_ready_delay: 5

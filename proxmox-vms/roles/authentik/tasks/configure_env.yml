@@ -4,31 +4,19 @@
 #
 # 秘密情報を扱うタスクはno_logで出力を抑止している(失敗しても詳細は出ない)。
 ---
-- name: 既存の.envファイルの有無を確認する
-  ansible.builtin.stat:
-    path: "{{ authentik_install_dir }}/.env"
-  become: true
-  register: authentik_env_stat
-
 - name: 既存の.envファイルを読み込む
-  ansible.builtin.slurp:
-    src: "{{ authentik_install_dir }}/.env"
-  become: true
-  register: authentik_env_slurp
-  when: authentik_env_stat.stat.exists
-  no_log: true
+  ansible.builtin.import_tasks: ../../../tasks/load_existing_env.yml
+  vars:
+    svc_env_path: "{{ authentik_install_dir }}/.env"
 
 - name: 既存の.envから引き継ぐ値を取り出す
   ansible.builtin.set_fact:
     authentik_env_pg_password: >-
-      {{ (authentik_env_content | regex_search('^PG_PASS=(.*)$', '\1', multiline=True)
+      {{ (vm_existing_env | regex_search('^PG_PASS=(.*)$', '\1', multiline=True)
           | default([], true)) | join('') }}
     authentik_env_secret_key: >-
-      {{ (authentik_env_content | regex_search('^AUTHENTIK_SECRET_KEY=(.*)$', '\1', multiline=True)
+      {{ (vm_existing_env | regex_search('^AUTHENTIK_SECRET_KEY=(.*)$', '\1', multiline=True)
           | default([], true)) | join('') }}
-  vars:
-    authentik_env_content: >-
-      {{ (authentik_env_slurp.content | b64decode) if authentik_env_stat.stat.exists else '' }}
   no_log: true
 
 - name: 使用するパスワード・シークレットキーを決定する

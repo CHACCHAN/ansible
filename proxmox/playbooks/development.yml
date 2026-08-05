@@ -1,16 +1,12 @@
 # 開発専用VMを、テンプレート構築からVM内部のセットアップまで一気通貫で構築します。
-# 処理は自前で持たず、proxmox-hosts / proxmox-vms のplaybookを順番に呼ぶだけです。
+# 処理は自前で持たず、共通フロー(../tasks/ と _provision_vm.yml)を通じて
+# proxmox-hosts / proxmox-vms のplaybookを順番に呼ぶだけです。
 #
-# 対象の決め方は2通り(以降の処理は共通で、対象は development_targets に集約されます):
+# 対象の決め方は2通り(以降の処理は共通で、対象は pv_targets に集約されます):
 #   インベントリ版(既定)  : ../inventory/development.yml のホスト。--limit で選択
 #   手動指定版(manual=true): -e で指定した1台のみ(インベントリが空なら自動でこちら)
 #
-# VM個別の設定に vm_ 接頭辞を使うのは、-e が全playbookから見えてしまうためです。
-# ssh_user や ipv4 をそのまま渡すとテンプレートにも焼き込まれてしまいます。
-#
-# 対象は同じホスト名のままグループへ登録し、接続先(ansible_host)だけを切り替えます:
-#   手順1〜6(Proxmox操作)     : ansible_host = 構築先ノード
-#   手順7〜8(VM内セットアップ): ansible_host = VM自身
+# 共通フローで使う変数は pv_ 接頭辞(provision)にしています。
 ---
 - name: インベントリから構築対象を選ぶ
   hosts: development
@@ -18,17 +14,11 @@
   connection: local
 
   vars:
-    development_manual_mode: >-
-      {{ manual | default((groups['development'] | default([]) | length) == 0) | bool }}
+    pv_group: development
 
   tasks:
     - name: インベントリのホストを構築対象に加える
-      ansible.builtin.add_host:
-        name: "{{ item }}"
-        groups: development_targets
-      loop: "{{ ansible_play_hosts }}"
-      changed_when: false
-      when: not (development_manual_mode | bool)
+      ansible.builtin.import_tasks: ../tasks/select_inventory_targets.yml
 
 - name: 手動指定の構築対象を追加する
   hosts: localhost
@@ -36,30 +26,14 @@
   connection: local
 
   vars:
-    development_manual_mode: >-
-      {{ manual | default((groups['development'] | default([]) | length) == 0) | bool }}
+    pv_group: development
 
   tasks:
-    - name: 接続先IPアドレスの指定を確認する
-      ansible.builtin.assert:
-        that:
-          - ((vm_ipv4 | default('', true)) | length > 0) or ((vm_ip | default('', true)) | length > 0)
-        fail_msg: >-
-          手動指定版では vm_ipv4(cloud-initで設定する固定IP。CIDR形式)または
-          vm_ip(既にIPが分かっている場合の接続先IP)のどちらかが必要です。
-        quiet: true
-      when: development_manual_mode | bool
-
-    # インベントリ版のホスト名の付け方に合わせ、VMのIPアドレスで登録する
-    - name: 指定されたVMを構築対象に加える
-      ansible.builtin.add_host:
-        name: "{{ vm_ip | default((vm_ipv4 | default('')).split('/')[0], true) }}"
-        groups: development_targets
-      changed_when: false
-      when: development_manual_mode | bool
+    - name: 手動指定されたVMを構築対象に加える
+      ansible.builtin.import_tasks: ../tasks/select_manual_target.yml
 
 - name: 構築対象を確認する
-  hosts: development_targets
+  hosts: pv_targets
   gather_facts: false
   connection: local
 
@@ -68,196 +42,31 @@
     - ../../proxmox-hosts/vault/secrets.yml
 
   tasks:
-    # 「-e があればそれ、無ければインベントリ、どちらも無ければ空」の順で解決する
-    - name: インベントリと-eの差分を解決する
+    - name: インベントリと-eの値から構築内容を決定する
+      ansible.builtin.import_tasks: ../tasks/resolve_target_vars.yml
+
+    # GUI(xrdpデスクトップ)を入れるかは最後の手順へホストごとに引き継ぐ
+    - name: GUIの要否を決定する
       ansible.builtin.set_fact:
-        # 構築先ノードは vm_node で受け取る。利用者が -e proxmox_ip=... を使うと
-        # 呼び出し先がそのIPを別の対象として登録してしまうため名前を分けている
-        development_proxmox_ip: "{{ vm_node | default('', true) }}"
-        development_proxmox_storage: "{{ proxmox_storage | default('', true) }}"
-        # VM内のセットアップがDebian(trixie)専用のため既定を固定する
-        development_os_type: "{{ os_type | default('debian', true) }}"
-        development_os_version: "{{ os_version | default('13', true) }}"
-        development_vm_ssh_user: "{{ vm_ssh_user | default('', true) }}"
-        development_vm_ssh_password: "{{ vm_ssh_password | default('', true) }}"
-        development_vm_ssh_prikey: "{{ vm_ssh_prikey | default('', true) }}"
-        development_vm_pubkey_direct: "{{ vm_ssh_pubkey | default('', true) }}"
-        development_vm_pubkey_file: "{{ vm_ssh_pubkey_file | default('', true) }}"
-        development_vm_ipv4_gw: "{{ vm_ipv4_gw | default('', true) }}"
-        development_vm_ipv6: "{{ vm_ipv6 | default('', true) }}"
-        development_vm_ipv6_gw: "{{ vm_ipv6_gw | default('', true) }}"
-        development_vm_nameserver: "{{ vm_nameserver | default('', true) }}"
-        development_vm_searchdomain: "{{ vm_searchdomain | default('', true) }}"
-        development_vm_gui_required: "{{ vm_gui_required | default(false, true) }}"
+        pv_vm_gui_required: "{{ vm_gui_required | default(false, true) }}"
 
-    - name: 派生する変数を決定する
-      ansible.builtin.set_fact:
-        development_vm_ip: "{{ vm_ip | default(inventory_hostname, true) }}"
-        # ホスト名がIPアドレスなので、プレフィックス長を付けてCIDRにする
-        development_vm_ipv4: >-
-          {{ vm_ipv4 | default(inventory_hostname + '/' + (vm_ipv4_prefix | default(24) | string), true) }}
-        # 内容(vm_ssh_pubkey)が無ければファイル(vm_ssh_pubkey_file)から読む
-        development_vm_ssh_pubkey: >-
-          {{
-            development_vm_pubkey_direct
-            if (development_vm_pubkey_direct | length > 0)
-            else (lookup('file', development_vm_pubkey_file | expanduser)
-                  if (development_vm_pubkey_file | length > 0) else '')
-          }}
-        development_target_storage: >-
-          {{ target_storage | default(development_proxmox_storage, true) }}
+    - name: 構築内容を表示してProxmox操作用に登録する
+      ansible.builtin.import_tasks: ../tasks/finalize_targets.yml
 
-    # 同じノードに複数台を同時構築するとVMID重複で衝突するため、
-    # テンプレート構築はノードごとに先頭の1台だけが担当する
-    - name: テンプレート構築を担当するホストを決める
-      ansible.builtin.set_fact:
-        development_template_host: >-
-          {{
-            ansible_play_hosts | map('extract', hostvars)
-            | selectattr('development_proxmox_ip', 'equalto', development_proxmox_ip)
-            | map(attribute='inventory_hostname') | first
-          }}
+# テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init → 起動 → SSH待ち
+- name: VMを構築して起動する
+  ansible.builtin.import_playbook: _provision_vm.yml
 
-    - name: 構築内容を表示する
-      ansible.builtin.debug:
-        msg: >-
-          VMID {{ vm_id | default('(未指定)') }} ({{ vm_name | default('(未指定)') }})
-          → ノード {{ development_proxmox_ip | default('(未指定)', true) }}
-          / ストレージ {{ development_target_storage | default('(未指定)', true) }}
-          / {{ development_os_type }} {{ development_os_version }}
-          / IP {{ development_vm_ipv4 }} gw {{ development_vm_ipv4_gw | default('(未指定)', true) }}
-          / ログイン {{ development_vm_ssh_user | default('(未指定)', true) }}
-          / テンプレート構築担当: {{ 'はい' if (inventory_hostname == development_template_host) else 'いいえ' }}
-
-    # 呼び出し先が処理するproxmoxグループへ、ホスト名のまま登録して接続先だけ向け直す。
-    # add_hostは1回しか実行されないため、対象ホストをループして1台ずつ登録する。
-    - name: テンプレート構築担当をProxmox操作用に登録する
-      ansible.builtin.add_host:
-        name: "{{ item }}"
-        groups: proxmox
-        ansible_host: "{{ hostvars[item].development_proxmox_ip }}"
-        ansible_user: "{{ hostvars[item].proxmox_ssh_user | default('root', true) }}"
-        ansible_password: "{{ vault_proxmox_ssh_password }}"
-      loop: "{{ ansible_play_hosts }}"
-      changed_when: false
-      when: item == hostvars[item].development_template_host
-
-# 1. cloud imageの取得とテンプレート構築(既にあれば何もしない)
-- name: テンプレートを構築する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_template_build.yml
-  vars:
-    # proxmox_ip は呼び出し先のlocalhostプレイでも参照されるため、
-    # 各ホストでは自分の構築先ノード、localhostでは登録済みホストの先頭を使う
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-    os_type: "{{ development_os_type }}"
-    os_version: "{{ development_os_version }}"
-
-- name: 残りの構築対象を登録する
-  hosts: development_targets
-  gather_facts: false
-  connection: local
-
-  vars_files:
-    - ../../proxmox-hosts/vault/secrets.yml
-
-  tasks:
-    - name: テンプレート構築担当以外をProxmox操作用に登録する
-      ansible.builtin.add_host:
-        name: "{{ item }}"
-        groups: proxmox
-        ansible_host: "{{ hostvars[item].development_proxmox_ip }}"
-        ansible_user: "{{ hostvars[item].proxmox_ssh_user | default('root', true) }}"
-        ansible_password: "{{ vault_proxmox_ssh_password }}"
-      loop: "{{ ansible_play_hosts }}"
-      changed_when: false
-      when: item != hostvars[item].development_template_host
-
-# 2. テンプレートからVMをクローンする
-- name: VMを構築する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_build.yml
-  vars:
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-    template_vmid: "{{ hostvars[development_template_host].os_defaults.template_vmid }}"
-    target_storage: "{{ development_target_storage }}"
-
-# 3. ハードウェア調整(クローン直後の停止中に適用される)
-- name: ハードウェア設定を変更する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_hardware.yml
-  when: (vm_hardware is defined) or (vm_hardware_delete is defined)
-  vars:
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-
-# 4. VMの動作設定(QEMUエージェント・自動起動など)
-- name: VMのオプションを変更する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_options.yml
-  when: (vm_options is defined) or (vm_options_delete is defined)
-  vars:
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-
-# 5. cloud-init設定(VM個別)
-- name: Cloud-initを設定する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_cloudinit.yml
-  vars:
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-    ssh_user: "{{ development_vm_ssh_user }}"
-    ssh_password: "{{ development_vm_ssh_password }}"
-    ssh_pubkey: "{{ development_vm_ssh_pubkey }}"
-    ipv4: "{{ development_vm_ipv4 }}"
-    ipv4_gw: "{{ development_vm_ipv4_gw }}"
-    ipv6: "{{ development_vm_ipv6 }}"
-    ipv6_gw: "{{ development_vm_ipv6_gw }}"
-    nameserver: "{{ development_vm_nameserver }}"
-    searchdomain: "{{ development_vm_searchdomain }}"
-
-# 6. VMを起動する(cloud-initはこの初回起動時に適用される)
-- name: VMを起動する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_powerctl.yml
-  vars:
-    proxmox_ip: "{{ development_proxmox_ip | default(groups['proxmox'] | first) }}"
-    power_state: "on"
-
-# 7. ここから先は相手がVM自身になるため、接続先をノードからVMへ向け直す
-- name: 接続先をVMへ切り替える
-  hosts: development_targets
-  gather_facts: false
-  connection: local
-
-  tasks:
-    - name: VM内セットアップ用に登録し直す
-      ansible.builtin.add_host:
-        name: "{{ item }}"
-        groups: vms
-        ansible_host: "{{ hostvars[item].development_vm_ip }}"
-        ansible_user: "{{ hostvars[item].development_vm_ssh_user }}"
-        ansible_password: ""
-        ansible_ssh_private_key_file: "{{ hostvars[item].development_vm_ssh_prikey }}"
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-      loop: "{{ ansible_play_hosts }}"
-      changed_when: false
-
-# 起動直後はsshdが動いていてもcloud-initによる鍵の配置が終わっていないことがあるため、
-# ポート疎通ではなく実際の接続で待機する
-- name: VMにSSH接続できるようになるまで待つ
-  hosts: vms
-  gather_facts: false
-
-  tasks:
-    - name: SSHでログインできるまで待機する
-      ansible.builtin.wait_for_connection:
-        delay: 5
-        sleep: 10
-        timeout: "{{ vm_ssh_wait_timeout | default(600) | int }}"
-
-# 8. VM内部のセットアップ
+# VM内部のセットアップ
 - name: VM内部をセットアップする
   ansible.builtin.import_playbook: ../../proxmox-vms/playbooks/development.yml
   vars:
     # 呼び出し先のlocalhostプレイでも参照されるため、
     # 各VMでは自分の値、localhostでは登録済みホストの先頭の値を使う
-    vm_ip: "{{ development_vm_ip | default(hostvars[groups['vms'] | first].development_vm_ip) }}"
+    vm_ip: "{{ pv_vm_ip | default(hostvars[groups['vms'] | first].pv_vm_ip) }}"
     vm_ssh_user: >-
-      {{ development_vm_ssh_user | default(hostvars[groups['vms'] | first].development_vm_ssh_user) }}
+      {{ pv_vm_ssh_user | default(hostvars[groups['vms'] | first].pv_vm_ssh_user) }}
     vm_ssh_prikey: >-
-      {{ development_vm_ssh_prikey | default(hostvars[groups['vms'] | first].development_vm_ssh_prikey) }}
+      {{ pv_vm_ssh_prikey | default(hostvars[groups['vms'] | first].pv_vm_ssh_prikey) }}
     vm_gui_required: >-
-      {{ development_vm_gui_required | default(hostvars[groups['vms'] | first].development_vm_gui_required) }}
+      {{ pv_vm_gui_required | default(hostvars[groups['vms'] | first].pv_vm_gui_required) }}
