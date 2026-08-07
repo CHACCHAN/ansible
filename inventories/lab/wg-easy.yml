@@ -1,8 +1,8 @@
-# playbooks/wg-easy.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/wg-easy.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/wg-easy.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/wg-easy.yml --ask-vault-pass --limit 172.16.11.5
+#   全台: ansible-playbook playbooks/services/wg-easy.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/wg-easy.yml --ask-vault-pass --limit 172.16.11.5
 #
 # グループ名だけは wg_easy(アンダースコア)です。
 # Ansibleのグループ名にはハイフンを使えないためで、他のファイルと違う点はここだけです。
@@ -59,7 +59,7 @@ wg_easy:
     vm_ssh_prikey: ~/.ssh/id_ed25519_wg_easy
 
     # --- wg-easy本体の設定 ---
-    # 指定できる項目(コンテナの全環境変数)は proxmox-vms/docs/wg-easy.md を参照。
+    # 指定できる項目(コンテナの全環境変数)は docs/vms/wg-easy.md を参照。
     # OIDCのクライアントIDとシークレット、管理者の初期パスワードは
     # vault/wg-easy.yml から渡る(実行には --ask-vault-pass が必要)。
     #

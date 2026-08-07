@@ -15,19 +15,19 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/wg-easy.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/wg-easy.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版: 接続先とOIDCサーバーはインベントリ、クライアント情報はvaultから入ります
-ansible-playbook playbooks/wg-easy.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/wg-easy.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
 
 # 接続先だけ差し替える
-ansible-playbook playbooks/wg-easy.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/wg-easy.yml --ask-vault-pass -vv \
 -e "vm_ssh_password=<パスワード> wg_easy_init_host=vpn.example.com"
 
 # 手動指定版
-ansible-playbook playbooks/wg-easy.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/wg-easy.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -43,7 +43,7 @@ ansible-playbook playbooks/wg-easy.yml --ask-vault-pass -vv \
   (ポート転送はこのplaybookの対象外です)
 
 ## インベントリ
-[inventory/wg-easy.yml](../inventory/wg-easy.yml) に**1台1ホスト**で書きます。
+[inventories/lab/wg-easy.yml](../../inventories/lab/wg-easy.yml) に**1台1ホスト**で書きます。
 ホスト名はVMのIPアドレスです。
 
 **グループ名だけは `wg_easy`(アンダースコア)です。**
@@ -60,7 +60,7 @@ OIDCのクライアントIDとシークレット、管理者の初期パスワ�
 [vault/wg-easy.yml](../vault/wg-easy.yml) に置き、**暗号化したまま**保管します。
 
 ```sh
-# 値を入れてから暗号化する(proxmox-hosts/vault/secrets.yml と同じパスワードにすること)
+# 値を入れてから暗号化する(vault/proxmox.yml と同じパスワードにすること)
 ansible-vault encrypt vault/wg-easy.yml
 
 # 中身を編集・確認する
@@ -75,10 +75,10 @@ ansible-vault view vault/wg-easy.yml
 | `vault_wg_easy_init_password` | `wg_easy_init_password`(空なら自動生成) |
 
 - ⚠ **`--ask-vault-pass` はパスワードを1つしか受け取りません。**
-  `proxmox-hosts/vault/secrets.yml` と**同じパスワード**で暗号化してください
+  `vault/proxmox.yml` と**同じパスワード**で暗号化してください
 - OIDCプロバイダのURL(`wg_easy_oauth_oidc_server`)は秘密ではないため
   インベントリ側に書いています
-- `proxmox-vms/playbooks/wg-easy.yml` を単体で実行する場合、このvaultは読まれません
+- `playbooks/vms/wg-easy.yml` を単体で実行する場合、このvaultは読まれません
   (`-e "wg_easy_oauth_oidc_client_secret=..."` のように渡してください)
 
 ## OIDC(Authentik等)側の設定
@@ -98,20 +98,20 @@ http://172.16.11.5:51821/api/auth/oidc/link       ← 既存アカウントと�
   OIDCでログインし直してアカウントを紐付けてから
   `wg_easy_disable_password_auth: true` にしてください(紐付け前に切ると締め出されます)
 - 手順の詳細は
-  [proxmox-vms/docs/wg-easy.md](../../proxmox-vms/docs/wg-easy.md#認証の考え方) を参照
+  [docs/vms/wg-easy.md](../vms/wg-easy.md#認証の考え方) を参照
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/wg-easy.yml](../../proxmox-vms/docs/wg-easy.md) —
+8. [playbooks/vms/wg-easy.yml](../vms/wg-easy.md) —
    VM内部のセットアップ、VM再起動、実行元の端末からの接続確認
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
@@ -146,8 +146,8 @@ http://172.16.11.5:51821/api/auth/oidc/link       ← 既存アカウントと�
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -165,7 +165,7 @@ http://172.16.11.5:51821/api/auth/oidc/link       ← 既存アカウントと�
 ## wg-easy本体の設定
 `wg_easy_` で始まる変数はそのまま手順8へ渡ります。
 **コンテナの環境変数はすべて指定できます**(全項目の対応表は
-[proxmox-vms/docs/wg-easy.md](../../proxmox-vms/docs/wg-easy.md#指定できる項目))。
+[docs/vms/wg-easy.md](../vms/wg-easy.md#指定できる項目))。
 
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
@@ -207,14 +207,14 @@ http://172.16.11.5:51821/api/auth/oidc/link       ← 既存アカウントと�
 
 ## 再実行・復旧
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
-- 設定を変えるだけなら `proxmox-vms/playbooks/wg-easy.yml` を直接実行してください
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+- 設定を変えるだけなら `playbooks/vms/wg-easy.yml` を直接実行してください
   (ただし `INIT_*` は初回のみ有効です)
 - ⚠ **VMを作り直すとクライアントの鍵も失われます。** `/opt/wg-easy/etc_wireguard` を
   バックアップしておいてください
 
 ## 注意
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` と
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` と
   `vault/wg-easy.yml` を読むため。**2つは同じパスワードで暗号化してください**)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)

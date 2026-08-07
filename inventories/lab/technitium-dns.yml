@@ -1,8 +1,8 @@
-# playbooks/technitium-dns.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/technitium-dns.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass --limit 192.168.10.53
+#   全台: ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass --limit 192.168.10.53
 #
 # グループ名だけは technitium_dns(アンダースコア)です。
 # Ansibleのグループ名にはハイフンを使えないためで、他のファイルと違う点はここだけです。
@@ -60,7 +60,7 @@ technitium_dns:
     vm_ssh_prikey: ~/.ssh/id_ed25519_technitium_dns
 
     # --- DNSサーバー本体の設定 ---
-    # 指定できる項目は proxmox-vms/docs/technitium-dns.md を参照。
+    # 指定できる項目は docs/vms/technitium-dns.md を参照。
     # 未指定ならロールの既定値(53/5380、管理者パスワードは自動生成)が使われる。
     # ⚠ 以下は設定ファイルが作られる初回起動時にしか反映されない。
     # technitium_version: "15.4.0"

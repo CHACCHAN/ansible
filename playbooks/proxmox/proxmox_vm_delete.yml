@@ -6,11 +6,12 @@
   gather_facts: false
 
   vars_files:
-    - "{{ playbook_dir }}/../vault/secrets.yml"
+    - "{{ playbook_dir }}/../../vault/proxmox.yml"
 
   tasks:
     - name: Proxmoxというグループでホストを追加
-      ansible.builtin.import_tasks: ../tasks/register-proxmox-host.yml
+      ansible.builtin.import_role:
+        name: proxmox_connect
 
 - name: Proxmox VMを削除する
   hosts: proxmox

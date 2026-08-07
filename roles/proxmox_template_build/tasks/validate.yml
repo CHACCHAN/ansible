@@ -12,6 +12,6 @@
       - os_defaults.template_vmid is defined
       - os_defaults.template_name is defined
     fail_msg: >-
-      必須変数が不足しています。呼び出し元で group_vars/all.yml と
-      group_vars/os_defaults/<os_type>.yml を読み込んでいるか確認してください。
+      必須変数が不足しています。呼び出し元のプレイで proxmox_os_defaults ロールを
+      実行して os_defaults を組み立てているか確認してください。
     quiet: true

@@ -8,19 +8,19 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/development.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/development.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版: 全台 / 1台だけ / 複数台
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv \
 --limit 192.168.10.21 -e "vm_ssh_password=<パスワード>"
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv \
 --limit '192.168.10.21,192.168.10.22' -e "vm_ssh_password=<パスワード>"
 
 # 手動指定版
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv \
 -e "manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -32,7 +32,7 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
   あるため)。同じ構成にするには `vm_hardware` / `vm_options` も `-e` で渡してください
 
 ## インベントリ
-[inventory/development.yml](../inventory/development.yml) に**1台1ホスト**で書きます。
+[inventories/lab/development.yml](../../inventories/lab/development.yml) に**1台1ホスト**で書きます。
 ホスト名はVMのIPアドレスです。
 
 | 優先順位 | 指定方法 |
@@ -42,17 +42,17 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
 | 低 | インベントリの `vars:`(グループ共通) |
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/development.yml](../../proxmox-vms/docs/development.md) — VM内部のセットアップ
+8. [playbooks/vms/development.yml](../vms/development.md) — VM内部のセットアップ
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
 
@@ -83,8 +83,8 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -123,7 +123,7 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
 
 ### 例: 1台だけメモリを増やしてGUIも入れる
 ```sh
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv \
 --limit 192.168.10.21 \
 -e 'vm_ssh_password=<パスワード> vm_gui_required=true \
     vm_hardware={"cpu":{"cores":8,"type":"host"},"memory":{"size":16384},"resize":[{"bus":"scsi","index":0,"size":512}]}'
@@ -131,7 +131,7 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
 
 ### 例: 手動指定版でインベントリと同じ構成にする
 ```sh
-ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/development.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=192.168.10.11 proxmox_storage=local-lvm \
     vm_id=200 vm_name=devvm \
     vm_ipv4=192.168.10.60/24 vm_ipv4_gw=192.168.10.1 \
@@ -143,9 +143,9 @@ ansible-playbook playbooks/development.yml --ask-vault-pass -vv \
 
 ## 注意
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
 - 全台実行時は並行して処理されます。1台が失敗しても他はそのまま進みます
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` を読むため)
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` を読むため)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)
 - VM内の設定は `vm_` 接頭辞で指定します。`ssh_user` や `ipv4` をそのまま `-e` で渡すと

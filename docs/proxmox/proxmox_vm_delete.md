@@ -12,13 +12,13 @@
 
 ## VMを削除する
 ```sh
-ansible-playbook playbooks/proxmox_vm_delete.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_delete.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<削除するVMのVMID> confirm_vm_id=<同じVMID>"
 ```
 
 ## バックアップ/レプリケーション設定や未参照ディスクもまとめて削除する
 ```sh
-ansible-playbook playbooks/proxmox_vm_delete.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_delete.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<削除するVMのVMID> confirm_vm_id=<同じVMID> \
     purge=true destroy_unreferenced_disks=true"
 ```

@@ -5,7 +5,7 @@
 # 決めるロールが、引き継ぎ元の値を取り出すために使う(取り出しの正規表現は
 # サービスごとに違うため、呼び出し側が vm_existing_env に対して行う)。
 #
-# 呼び出し側(各ロールのconfigure_env.yml)が import_tasks の vars で渡すもの:
+# 呼び出し側(各ロールのconfigure_env.yml)が import_role の vars で渡すもの:
 #   svc_env_path : 読み込む .env のパス
 ---
 - name: 既存の.envファイルの有無を確認する

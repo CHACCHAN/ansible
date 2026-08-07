@@ -8,7 +8,7 @@
   (一覧: https://pve.proxmox.com/pve-docs/qm.1.html )
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_options.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_options.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     vm_options={"agent":1,"onboot":1}'
 ```
@@ -33,7 +33,7 @@ ansible-playbook playbooks/proxmox_vm_options.yml --ask-vault-pass -vv \
 またはリストで指定します。
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_options.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_options.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     vm_options_delete=["description","tags"]'
 ```
@@ -42,7 +42,7 @@ ansible-playbook playbooks/proxmox_vm_options.yml --ask-vault-pass -vv \
 `-e` 全体をJSONにする方法が使えます。
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_options.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_options.yml --ask-vault-pass -vv \
 -e '{"proxmox_ip":"<ProxmoxホストのIPアドレス>","vm_id":101,"vm_options":{"description":"dev vm"}}'
 ```
 

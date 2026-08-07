@@ -1,4 +1,4 @@
-# 構成完了後のVM再起動。各playbookのpost_tasksから import_tasks で呼ぶ。
+# 構成完了後のVM再起動。各playbookのpost_tasksから import_role(tasks_from: reboot_vm)で呼ぶ。
 # dockerグループへの追加とカーネル更新の反映に再起動が必要。
 # restart: unless-stopped のコンテナは再起動後に自動復帰する。
 ---

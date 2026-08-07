@@ -1,5 +1,5 @@
 # タイムゾーン(vm_timezone)・ロケール(vm_locale)・zram(vm_zram_percent)の
-# 既定値は proxmox-vms/tasks/ 配下の共通タスク側にある。
+# 既定値は roles/common・roles/docker の共通タスク側にある。
 ---
 # VSCode Server(Remote-SSH)の古い版を何日放置したら削除するか / 実行頻度(OnCalendar書式)
 development_vscode_cleanup_retention_days: 14

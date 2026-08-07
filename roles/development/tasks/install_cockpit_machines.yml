@@ -72,5 +72,5 @@
       /dev/kvm が見つかりません。Cockpit Machinesのインストールは完了していますが、
       ハードウェア支援が無いため仮想マシンはTCG(ソフトウェアエミュレーション)で
       動作し著しく低速です。Proxmoxホスト側でこのVMのCPUタイプを `host` にする等で
-      ネストした仮想化を有効化してください(ホスト側の操作は proxmox-hosts/ 側の管轄です)。
+      ネストした仮想化を有効化してください(ホスト側の操作は playbooks/proxmox/ 側の管轄です)。
   when: not development_kvm_device.stat.exists

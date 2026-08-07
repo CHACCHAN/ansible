@@ -1,8 +1,8 @@
-# playbooks/kubernetes.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/kubernetes.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/kubernetes.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/kubernetes.yml --ask-vault-pass --limit 192.168.10.71
+#   全台: ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass --limit 192.168.10.71
 #   複数: --limit '192.168.10.71,192.168.10.72'
 #
 # 全台実行のときは「コントロールプレーン → ワーカー」の順に1台ずつ構築される
@@ -39,7 +39,7 @@ kubernetes:
     # --- k3s ---
     # ワーカーの参加先。コントロールプレーン自身にも渡るが、自分を指す値は
     # 「クラスタの1台目」として扱われるためグループ共通で書ける。
-    # 指定できる項目は proxmox-vms/docs/kubernetes.md を参照。
+    # 指定できる項目は docs/vms/kubernetes.md を参照。
     kubernetes_server_ip: 10.10.20.11
     # kubernetes_version: v1.34.1+k3s1   # 未指定なら最新安定版
     # kubernetes_disable: [traefik]      # 標準コンポーネントの無効化

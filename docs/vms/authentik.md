@@ -5,11 +5,11 @@
 接続情報と共通オプションは [README](../README.md#全playbook共通の指定) を参照してください。
 
 ```sh
-ansible-playbook playbooks/authentik.yml -vv \
+ansible-playbook playbooks/vms/authentik.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名>"
 
 # 初期管理者のパスワードまで一度に決める場合
-ansible-playbook playbooks/authentik.yml -vv \
+ansible-playbook playbooks/vms/authentik.yml -vv \
 -e "vm_ip=192.168.10.60 vm_ssh_user=authentik vm_ssh_prikey=~/.ssh/id_ed25519 \
     authentik_bootstrap_password=<パスワード> authentik_bootstrap_email=<メールアドレス>"
 ```

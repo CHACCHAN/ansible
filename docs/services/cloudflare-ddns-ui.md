@@ -11,19 +11,19 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/cloudflare-ddns-ui.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/cloudflare-ddns-ui.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版: レコードはインベントリ、認証情報はvaultから入ります
-ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/cloudflare-ddns-ui.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
 
 # 更新するレコードだけ差し替える
-ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/cloudflare-ddns-ui.yml --ask-vault-pass -vv \
 -e "vm_ssh_password=<パスワード> cloudflare_ddns_ui_records=auth.example.com,wg.example.com"
 
 # 手動指定版
-ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/cloudflare-ddns-ui.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -40,7 +40,7 @@ ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass -vv \
   (`cloudflare_ddns_ui_http_bind: 127.0.0.1` で絞れます)
 
 ## インベントリ
-[inventory/cloudflare-ddns-ui.yml](../inventory/cloudflare-ddns-ui.yml) に**1台1ホスト**で
+[inventories/lab/cloudflare-ddns-ui.yml](../../inventories/lab/cloudflare-ddns-ui.yml) に**1台1ホスト**で
 書きます。ホスト名はVMのIPアドレスです。
 
 **グループ名だけは `cloudflare_ddns_ui`(アンダースコア)です。**
@@ -72,26 +72,26 @@ ansible-vault view vault/cloudflare.yml
 | `vault_cloudflare_api_token` | `cloudflare_ddns_ui_api_token` |
 
 - ⚠ **`--ask-vault-pass` はパスワードを1つしか受け取りません。**
-  `proxmox-hosts/vault/secrets.yml` と**同じパスワード**で暗号化してください
+  `vault/proxmox.yml` と**同じパスワード**で暗号化してください
   (別にしたい場合は `--vault-id` を使い分ける必要があります)
 - APIトークンは **Zone → DNS → Edit** 権限で、対象ゾーンだけに絞って作成してください
 - 複数ゾーンを扱う場合は、vaultではなく `cloudflare_ddns_ui_zones`(ドメイン: ゾーンID)で
   指定します。ゾーンIDを平文で置きたくない場合は `ansible-vault encrypt_string` を使ってください
-- `proxmox-vms/playbooks/cloudflare-ddns-ui.yml` を単体で実行する場合、このvaultは
+- `playbooks/vms/cloudflare-ddns-ui.yml` を単体で実行する場合、このvaultは
   読まれません(`-e "cloudflare_ddns_ui_api_token=..."` のように渡してください)
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/cloudflare-ddns-ui.yml](../../proxmox-vms/docs/cloudflare-ddns-ui.md) —
+8. [playbooks/vms/cloudflare-ddns-ui.yml](../vms/cloudflare-ddns-ui.md) —
    VM内部のセットアップ、VM再起動、実行元の端末からの接続確認
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
@@ -125,8 +125,8 @@ ansible-vault view vault/cloudflare.yml
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -159,7 +159,7 @@ ansible-vault view vault/cloudflare.yml
 ⚠ このアプリは **Aレコード(IPv4)のみ**を、**TTL自動・プロキシ無効**で更新します。
 また**Cloudflare側に既にAレコードがある必要があります**。
 全項目と制約は
-[proxmox-vms/docs/cloudflare-ddns-ui.md](../../proxmox-vms/docs/cloudflare-ddns-ui.md)
+[docs/vms/cloudflare-ddns-ui.md](../vms/cloudflare-ddns-ui.md)
 を参照してください。
 
 ## `-e` で渡す変数
@@ -186,12 +186,12 @@ ansible-vault view vault/cloudflare.yml
 
 ## 再実行・復旧
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
-- レコードを変えるだけなら `proxmox-vms/playbooks/cloudflare-ddns-ui.yml` を
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+- レコードを変えるだけなら `playbooks/vms/cloudflare-ddns-ui.yml` を
   直接実行してください(`-e` の指定を変えて再実行すると `config.json` が置き換わります)
 
 ## 注意
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` と
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` と
   `vault/cloudflare.yml` を読むため。**2つは同じパスワードで暗号化してください**)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)

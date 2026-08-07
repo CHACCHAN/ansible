@@ -8,7 +8,8 @@
 
   tasks:
     - name: 対象VMをインベントリに登録して疎通を確認する
-      ansible.builtin.import_tasks: ../tasks/register-vm-host.yml
+      ansible.builtin.import_role:
+        name: vm_connect
 
 - name: Authentik専用VMを構築する
   hosts: vms
@@ -22,7 +23,9 @@
   # 最後に「実行元の端末から」WebUIが見えることまで確認する。
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
+      ansible.builtin.import_role:
+        name: common
+        tasks_from: reboot_vm
 
     - name: 実行元の端末からWebUIに接続できることを確認する
       ansible.builtin.uri:

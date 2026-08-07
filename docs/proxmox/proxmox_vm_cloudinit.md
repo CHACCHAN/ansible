@@ -8,7 +8,7 @@
   変更前にエラーで終了します
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     ssh_user=<ユーザ名> ssh_password=<パスワード> ssh_pubkey='<公開鍵>' \
     ipv4=<IPv4アドレス/CIDR> ipv4_gw=<IPv4アドレス> \
@@ -49,7 +49,7 @@ ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 
 ```sh
 # net1(占有ネットワーク)にIPだけを付ける。ゲートウェイは指定しない
-ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 -e "proxmox_ip=192.168.10.11 vm_id=101 net1_ipv4=10.10.10.21/24"
 ```
 
@@ -71,11 +71,11 @@ Proxmoxホストへの接続に使う `vault_proxmox_ssh_password` とは別物�
 ## 使用例
 ```sh
 # パスワードだけを変更する
-ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 -e "proxmox_ip=192.168.10.11 vm_id=101 ssh_password=<新しいパスワード>"
 
 # IPアドレスを固定に変更する
-ansible-playbook playbooks/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_cloudinit.yml --ask-vault-pass -vv \
 -e "proxmox_ip=192.168.10.11 vm_id=101 ipv4=192.168.10.50/24 ipv4_gw=192.168.10.1"
 ```
 

@@ -5,11 +5,11 @@
 接続情報と共通オプションは [README](../README.md#全playbook共通の指定) を参照してください。
 
 ```sh
-ansible-playbook playbooks/technitium-dns.yml -vv \
+ansible-playbook playbooks/vms/technitium-dns.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名>"
 
 # 上位DNSへの転送と管理者パスワードまで一度に決める場合
-ansible-playbook playbooks/technitium-dns.yml -vv \
+ansible-playbook playbooks/vms/technitium-dns.yml -vv \
 -e '{"vm_ip":"192.168.10.53","vm_ssh_user":"dns","vm_ssh_prikey":"~/.ssh/id_ed25519",
      "technitium_forwarders":["1.1.1.1","8.8.8.8"],
      "technitium_admin_password":"<16文字以上のパスワード>"}'
@@ -138,7 +138,7 @@ DNSサーバーは53番を占有するため、VM側で53番を待ち受けて�
 
 なお**VM自身のDNS参照先は変更しません**(cloud-initで設定した値のままです)。
 自分自身を使わせたい場合は、VM内で `/etc/resolv.conf` を編集するか、
-`proxmox-hosts/playbooks/proxmox_vm_cloudinit.yml` の `nameserver` を変更してください。
+`playbooks/proxmox/proxmox_vm_cloudinit.yml` の `nameserver` を変更してください。
 
 ## 初期セットアップ(初回のみ)
 ```

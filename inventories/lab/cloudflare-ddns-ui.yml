@@ -1,8 +1,8 @@
-# playbooks/cloudflare-ddns-ui.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/cloudflare-ddns-ui.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/cloudflare-ddns-ui.yml --ask-vault-pass --limit 172.16.11.4
+#   全台: ansible-playbook playbooks/services/cloudflare-ddns-ui.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/cloudflare-ddns-ui.yml --ask-vault-pass --limit 172.16.11.4
 #
 # グループ名だけは cloudflare_ddns_ui(アンダースコア)です。
 # Ansibleのグループ名にはハイフンを使えないためで、他のファイルと違う点はここだけです。
@@ -59,7 +59,7 @@ cloudflare_ddns_ui:
     vm_ssh_prikey: ~/.ssh/id_ed25519_cloudflare_ddns_ui
 
     # --- cloudflare-ddns-ui本体の設定 ---
-    # 指定できる項目は proxmox-vms/docs/cloudflare-ddns-ui.md を参照。
+    # 指定できる項目は docs/vms/cloudflare-ddns-ui.md を参照。
     # APIトークンとゾーンIDは vault/cloudflare.yml から自動で渡される
     # (実行には --ask-vault-pass が必要。平文でここに書かないこと)。
     #

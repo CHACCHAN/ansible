@@ -9,13 +9,13 @@
 
 ## VMを起動する
 ```sh
-ansible-playbook playbooks/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> power_state=on"
 ```
 
 ## VMをシャットダウンする(既定: 5分待って、タイムアウトしても強制停止しない)
 ```sh
-ansible-playbook playbooks/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> power_state=off"
 ```
 - ゲストOSへACPI経由でシャットダウンを要求し、既定で最大5分待ちます
@@ -24,7 +24,7 @@ ansible-playbook playbooks/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
 
 ## n分待ってもシャットダウンしない場合は強制終了する
 ```sh
-ansible-playbook playbooks/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_powerctl.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> power_state=off \
     shutdown_timeout_minutes=3 shutdown_force=true"
 ```

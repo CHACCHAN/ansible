@@ -1,28 +1,34 @@
 # Docker ComposeでSupabase(セルフホスト)を構築する。Debian専用。
-# 全VM共通の処理は proxmox-vms/tasks/ 配下(= ../../../tasks/)と共有している。
+# 全VM共通の処理は common / docker ロール(roles/common, roles/docker)と共有している。
 #
 # compose定義・Kongの設定・DBの初期化SQLは公式リポジトリの docker/ をそのまま使い、
 # Ansibleは .env(環境変数)だけを管理する。
 ---
 - name: 対象OSを確認する
-  ansible.builtin.import_tasks: ../../../tasks/assert_debian.yml
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: assert_debian
 
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
 # イメージが大きいため、取得を始める前に空き容量を確認する
 - name: ディスクの空き容量を確認する
-  ansible.builtin.import_tasks: ../../../tasks/check_disk_space.yml
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: check_disk_space
   vars:
     svc_name: Supabase
     svc_min_free_gb: "{{ supabase_min_free_disk_gb }}"
     svc_min_free_var: supabase_min_free_disk_gb
 
 - name: VM共通の初期セットアップを実行する
-  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
+  ansible.builtin.import_role:
+    name: common
 
 - name: Dockerをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
+  ansible.builtin.import_role:
+    name: docker
 
 - name: Supabase用のディレクトリを準備する
   ansible.builtin.import_tasks: prepare_directories.yml
@@ -39,7 +45,9 @@
   ansible.builtin.import_tasks: deploy_compose.yml
 
 - name: APIゲートウェイとDBのポートを開放する
-  ansible.builtin.import_tasks: ../../../tasks/configure_ufw_ports.yml
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: configure_ufw_ports
   vars:
     svc_ufw_ports:
       - { port: "{{ supabase_kong_http_port }}", proto: tcp }

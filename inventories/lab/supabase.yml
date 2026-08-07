@@ -1,11 +1,13 @@
-# playbooks/supabase.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/supabase.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/supabase.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/supabase.yml --ask-vault-pass --limit 172.16.11.6
+#   全台: ansible-playbook playbooks/services/supabase.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/supabase.yml --ask-vault-pass --limit 172.16.11.6
 #
-# パスワードとAPIキーはVM内で自動生成され、VM内の .env に保存される
-# (このファイルにも vault にも秘密情報は置かない)。
+# APIキーと大半のパスワードはVM内で自動生成され、VM内の .env に保存される
+# (このファイルには秘密情報を置かない)。
+# ダッシュボードのログインパスワードだけは vault/supabase.yml の
+# vault_supabase_user_password を使う。
 ---
 supabase:
   hosts:
@@ -44,7 +46,7 @@ supabase:
       resize:
         - bus: scsi
           index: 0
-          size: 480
+          size: 400
 
     # --- VMの動作設定(稼働中でも変更できる) ---
     vm_options:
@@ -57,13 +59,19 @@ supabase:
     vm_ssh_prikey: ~/.ssh/id_ed25519_supabase
 
     # --- Supabase本体の設定 ---
-    # .env に入る値はすべて変数で指定できる(一覧は proxmox-vms/docs/supabase.md)。
-    # パスワード・APIキーは未指定なら公式スクリプトで自動生成され、
+    # .env に入る値はすべて変数で指定できる(一覧は docs/vms/supabase.md)。
+    # APIキーとパスワードは未指定なら公式スクリプトで自動生成され、
     # 再実行でも作り直されない(VM内の .env から引き継ぐ)。
+    #
+    # ダッシュボードのログイン。パスワードは vault/supabase.yml の
+    # vault_supabase_user_password が使われる(vaultが空なら自動生成)。
+    # ユーザー名を変えたいときだけ次を指定する
+    # supabase_dashboard_username: supabase
     #
     # ブラウザやアプリから見たURL。未指定ならVMのIPとKongのポートから組み立てる。
     # リバースプロキシ経由で使う場合は必ず指定すること(認証メールのリンクにも使われる)
-    # supabase_public_url: https://supabase.cc-chacchan.com
+    supabase_public_url: https://api.cc-chacchan.com
+    supabase_api_external_url: https://api.cc-chacchan.com
     # supabase_site_url: https://app.cc-chacchan.com
 
     # 取得する公式構成のリビジョン(イメージのタグはこの中で固定されている)。
@@ -75,7 +83,14 @@ supabase:
     #   - docker-compose.yml
     #   - docker-compose.logs.yml
 
-    # supabase_kong_http_port: 8000       # API + ダッシュボード
+    # --- 公開ポート ---
+    # APIとダッシュボードは同じKong(APIゲートウェイ)が同じポートで配信する。
+    # ダッシュボードは / 、APIは /auth/v1 や /rest/v1 のようにパスで分かれる。
+    # 直接publishすると認証を通らなくなるため、Studioは個別に公開しない。
+    supabase_kong_http_port: 8000 # API + ダッシュボード(http://<VMのIP>:8000/)
+
+
+    # supabase_kong_https_port: 8443      # 公式のTLS設定を有効にした場合のみ使う
     # supabase_postgres_port: 5432        # Postgres(セッションモード)
     # supabase_pooler_proxy_port_transaction: 6543
     # メールを送れない環境では、確認メール無しでユーザーを有効化する

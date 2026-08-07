@@ -1,10 +1,10 @@
 # cloudflare-ddns-ui(公開IPの変化をCloudflareのAレコードに反映する常駐サービス)のVMを、
 # テンプレート構築からVM内部のセットアップまで一気通貫で構築します。
-# 処理は自前で持たず、共通フロー(../tasks/ と _provision_vm.yml)を通じて
-# proxmox-hosts / proxmox-vms のplaybookを順番に呼ぶだけです。
+# 処理は自前で持たず、共通フロー(provisionロールと _provision_vm.yml)を通じて
+# playbooks/proxmox/ と playbooks/vms/ のplaybookを順番に呼ぶだけです。
 #
 # 対象の決め方は2通り(以降の処理は共通で、対象は pv_targets に集約されます):
-#   インベントリ版(既定)  : ../inventory/cloudflare-ddns-ui.yml のホスト。--limit で選択
+#   インベントリ版(既定)  : inventories/lab/cloudflare-ddns-ui.yml のホスト。--limit で選択
 #   手動指定版(manual=true): -e で指定した1台のみ(インベントリが空なら自動でこちら)
 #
 # 共通フローで使う変数は pv_ 接頭辞(provision)にしています。アプリ本体の設定は
@@ -21,7 +21,9 @@
 
   tasks:
     - name: インベントリのホストを構築対象に加える
-      ansible.builtin.import_tasks: ../tasks/select_inventory_targets.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: select_inventory_targets
 
 - name: 手動指定の構築対象を追加する
   hosts: localhost
@@ -33,7 +35,9 @@
 
   tasks:
     - name: 手動指定されたVMを構築対象に加える
-      ansible.builtin.import_tasks: ../tasks/select_manual_target.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: select_manual_target
 
 - name: 構築対象を確認する
   hosts: pv_targets
@@ -43,8 +47,8 @@
   # 登録するホストにProxmoxへの接続情報を持たせるため、呼び出し先と同じvaultを読む。
   # Cloudflareの認証情報も同じタイミングで読み込む(どちらも --ask-vault-pass で復号)
   vars_files:
-    - ../../proxmox-hosts/vault/secrets.yml
-    - ../vault/cloudflare.yml
+    - ../../vault/proxmox.yml
+    - ../../vault/cloudflare.yml
 
   vars:
     pv_service_summary: >-
@@ -59,7 +63,9 @@
 
   tasks:
     - name: インベントリと-eの値から構築内容を決定する
-      ansible.builtin.import_tasks: ../tasks/resolve_target_vars.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: resolve_target_vars
 
     # vaultの値をアプリの変数へ渡す。
     # vars_filesはこのプレイの中だけの変数で、最後の手順(別プレイ)からは見えないため、
@@ -89,7 +95,7 @@
           インベントリに書くか、
           -e "cloudflare_ddns_ui_records=auth.example.com,wg.example.com
           cloudflare_ddns_ui_zone_domain=example.com" のように渡します
-          (指定できる項目は proxmox-vms/docs/cloudflare-ddns-ui.md を参照)。
+          (指定できる項目は docs/vms/cloudflare-ddns-ui.md を参照)。
         quiet: true
 
     - name: Cloudflareの認証情報の指定漏れで停止する
@@ -100,13 +106,15 @@
             or ((cloudflare_ddns_ui_zones | default({}, true)) | length > 0)
         fail_msg: >-
           CloudflareのAPIトークンまたはゾーンIDがありません。
-          ../vault/cloudflare.yml に vault_cloudflare_api_token と
+          ../../vault/cloudflare.yml に vault_cloudflare_api_token と
           vault_cloudflare_zone_id を入れて --ask-vault-pass で実行するか、
           -e で cloudflare_ddns_ui_api_token / cloudflare_ddns_ui_zone_id を渡してください。
         quiet: true
 
     - name: 構築内容を表示してProxmox操作用に登録する
-      ansible.builtin.import_tasks: ../tasks/finalize_targets.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: finalize_targets
 
 # テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init → 起動 → SSH待ち
 - name: VMを構築して起動する
@@ -115,7 +123,7 @@
 # VM内部のセットアップ。
 # アプリ本体の設定(cloudflare_ddns_ui_records等)はインベントリや-eの値がそのまま渡る。
 - name: VM内部をセットアップする
-  ansible.builtin.import_playbook: ../../proxmox-vms/playbooks/cloudflare-ddns-ui.yml
+  ansible.builtin.import_playbook: ../vms/cloudflare-ddns-ui.yml
   vars:
     # 呼び出し先のlocalhostプレイでも参照されるため、
     # 各VMでは自分の値、localhostでは登録済みホストの先頭の値を使う

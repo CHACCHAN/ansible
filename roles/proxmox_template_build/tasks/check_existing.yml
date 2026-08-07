@@ -1,6 +1,8 @@
 ---
 - name: クラスタ全体のVM一覧を取得する
-  ansible.builtin.import_tasks: ../../../tasks/get_cluster_vm_info.yml
+  ansible.builtin.import_role:
+    name: proxmox_common
+    tasks_from: get_cluster_vm_info
 
 - name: 該当VMIDのVM情報を抽出する
   ansible.builtin.set_fact:

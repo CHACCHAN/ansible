@@ -9,19 +9,19 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/kubernetes.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/kubernetes.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版: クラスタ一式(コントロールプレーン + ワーカー)をまとめて構築
-ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
 
 # ワーカーを1台だけ追加する(コントロールプレーンは構築済み)
-ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass -vv \
 --limit 192.168.10.72 -e "vm_ssh_password=<パスワード>"
 
 # 手動指定版(コントロールプレーン)
-ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -31,7 +31,7 @@ ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
     vm_options={"agent":1,"onboot":1}'
 
 # 手動指定版(ワーカー)。参加先のIPを足すだけで、トークンは自動取得します
-ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/kubernetes.yml --ask-vault-pass -vv \
 -e 'manual=true ... kubernetes_node_role=agent kubernetes_server_ip=<コントロールプレーンのIP>'
 ```
 
@@ -52,7 +52,7 @@ ansible-playbook playbooks/kubernetes.yml --ask-vault-pass -vv \
   参加先のコントロールプレーンが**起動していてSSHでログインできる**必要があります
 
 ## インベントリ
-[inventory/kubernetes.yml](../inventory/kubernetes.yml) に**1台1ホスト**で書きます。
+[inventories/lab/kubernetes.yml](../../inventories/lab/kubernetes.yml) に**1台1ホスト**で書きます。
 ホスト名はVMのIPアドレスです。
 
 | 優先順位 | 指定方法 |
@@ -84,17 +84,17 @@ kubernetes:
 - **Kubernetes上のノード名は `vm_name`** です(cloud-initがVM名をホスト名に設定するため)
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/kubernetes.yml](../../proxmox-vms/docs/kubernetes.md) —
+8. [playbooks/vms/kubernetes.yml](../vms/kubernetes.md) —
    k3sの導入とクラスタへの参加、VM再起動、ノードがReadyであることの確認
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
@@ -136,8 +136,8 @@ ssh -i ~/.ssh/<秘密鍵> <vm_ssh_user>@192.168.10.70 'kubectl get nodes -o wide
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -212,7 +212,7 @@ kubernetes:
 | `kubernetes_disable_swap` | `true` | swapを無効化する |
 
 全項目と運用(バージョンアップ・ノードの外し方・HA構成)は
-[proxmox-vms/docs/kubernetes.md](../../proxmox-vms/docs/kubernetes.md) を参照してください。
+[docs/vms/kubernetes.md](../vms/kubernetes.md) を参照してください。
 
 ## `-e` で渡す変数
 | 変数 | 既定値 | 内容 |
@@ -240,16 +240,16 @@ kubernetes:
 
 ## 再実行・復旧
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
-- 構築済みVMのk3sだけを更新する場合は `proxmox-vms/playbooks/kubernetes.yml` を
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+- 構築済みVMのk3sだけを更新する場合は `playbooks/vms/kubernetes.yml` を
   直接実行してください(クラスタのデータはそのまま残ります)
 - ノードをクラスタから外す手順は
-  [proxmox-vms/docs/kubernetes.md](../../proxmox-vms/docs/kubernetes.md#ノードを外す作り直す) にあります
+  [docs/vms/kubernetes.md](../vms/kubernetes.md#ノードを外す作り直す) にあります
 
 ## 注意
 - 手順8は1台ずつ処理されるため、台数が増えるとその分時間がかかります
   (1台あたりOS更新・k3s導入・再起動で数分)
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` を読むため)
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` を読むため)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)
 - VM内の設定は `vm_` 接頭辞で指定します。`ssh_user` や `ipv4` をそのまま `-e` で渡すと

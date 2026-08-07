@@ -25,7 +25,8 @@
 
   tasks:
     - name: 対象VMをインベントリに登録して疎通を確認する
-      ansible.builtin.import_tasks: ../tasks/register-vm-host.yml
+      ansible.builtin.import_role:
+        name: vm_connect
 
     # トークンの取得(sudoでnode-tokenを読む)と、ワーカーがReadyになったかの確認に使う
     - name: 参加先のコントロールプレーンを登録する
@@ -53,7 +54,7 @@
             msg: >-
               参加先のコントロールプレーン {{ kubernetes_join_target }}:22 に接続できませんでした。
               参加用トークンをそのVMから取得するため、構築中はコントロールプレーンが
-              起動している必要があります(VMの起動は proxmox-hosts/ 側の管轄です)。
+              起動している必要があります(VMの起動は playbooks/proxmox/ 側の管轄です)。
 
 - name: Kubernetes(k3s)のノードを構築する
   hosts: vms
@@ -70,7 +71,9 @@
   # k3sはsystemdで自動起動するので、再起動後に復帰することまで確認する。
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
+      ansible.builtin.import_role:
+        name: common
+        tasks_from: reboot_vm
 
     - name: 再起動後にk3sサービスが復帰することを確認する
       ansible.builtin.systemd:

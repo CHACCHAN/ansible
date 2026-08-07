@@ -1,8 +1,8 @@
-# playbooks/authentik.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/authentik.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/authentik.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/authentik.yml --ask-vault-pass --limit 192.168.10.60
+#   全台: ansible-playbook playbooks/services/authentik.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/authentik.yml --ask-vault-pass --limit 192.168.10.60
 #
 # パスワード類は平文で書かないこと(-e で渡すか ansible-vault encrypt_string を使う)。
 ---
@@ -56,7 +56,7 @@ authentik:
     vm_ssh_prikey: ~/.ssh/id_ed25519_authentik
 
     # --- Authentik本体の設定 ---
-    # 指定できる項目は proxmox-vms/docs/authentik.md を参照。
+    # 指定できる項目は docs/vms/authentik.md を参照。
     # 未指定ならロールの既定値(9000/9443、パスワード類は自動生成)が使われる。
     # authentik_version: "2026.5.6"
     # authentik_http_port: 9000

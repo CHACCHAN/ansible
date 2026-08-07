@@ -1,8 +1,8 @@
-# playbooks/development.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
+# playbooks/services/development.yml 用。1ホスト = 構築するVM1台、ホスト名はVMのIPアドレス。
 # ここに書いた値は既定値で、-e で同じ変数を渡すとそちらが優先される。
 #
-#   全台: ansible-playbook playbooks/development.yml --ask-vault-pass
-#   個別: ansible-playbook playbooks/development.yml --ask-vault-pass --limit 192.168.10.21
+#   全台: ansible-playbook playbooks/services/development.yml --ask-vault-pass
+#   個別: ansible-playbook playbooks/services/development.yml --ask-vault-pass --limit 192.168.10.21
 #   複数: --limit '192.168.10.21,192.168.10.22'
 #
 # パスワード類は平文で書かないこと(-e で渡すか ansible-vault encrypt_string を使う)。

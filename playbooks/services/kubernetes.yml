@@ -1,9 +1,9 @@
 # Kubernetes(k3s)のVMを、テンプレート構築からクラスタへの参加まで一気通貫で構築します。
-# 処理は自前で持たず、共通フロー(../tasks/ と _provision_vm.yml)を通じて
-# proxmox-hosts / proxmox-vms のplaybookを順番に呼ぶだけです。
+# 処理は自前で持たず、共通フロー(provisionロールと _provision_vm.yml)を通じて
+# playbooks/proxmox/ と playbooks/vms/ のplaybookを順番に呼ぶだけです。
 #
 # 対象の決め方は2通り(以降の処理は共通で、対象は pv_targets に集約されます):
-#   インベントリ版(既定)  : ../inventory/kubernetes.yml のホスト。--limit で選択
+#   インベントリ版(既定)  : inventories/lab/kubernetes.yml のホスト。--limit で選択
 #   手動指定版(manual=true): -e で指定した1台のみ(インベントリが空なら自動でこちら)
 #
 # 共通フローで使う変数は pv_ 接頭辞(provision)にしています。k3s本体の設定は
@@ -28,7 +28,9 @@
 
   tasks:
     - name: インベントリのホストを構築対象に加える
-      ansible.builtin.import_tasks: ../tasks/select_inventory_targets.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: select_inventory_targets
 
 - name: 手動指定の構築対象を追加する
   hosts: localhost
@@ -40,7 +42,9 @@
 
   tasks:
     - name: 手動指定されたVMを構築対象に加える
-      ansible.builtin.import_tasks: ../tasks/select_manual_target.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: select_manual_target
 
 - name: 構築対象を確認する
   hosts: pv_targets
@@ -49,7 +53,7 @@
 
   # 登録するホストにProxmoxへの接続情報を持たせるため、呼び出し先と同じvaultを読む
   vars_files:
-    - ../../proxmox-hosts/vault/secrets.yml
+    - ../../vault/proxmox.yml
 
   vars:
     pv_service_summary: >-
@@ -64,10 +68,12 @@
 
   tasks:
     - name: インベントリと-eの値から構築内容を決定する
-      ansible.builtin.import_tasks: ../tasks/resolve_target_vars.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: resolve_target_vars
 
     # ノード種別は「ワーカーかどうか」だけをここで判定する(構築の順番を決めるため)。
-    # 値の検証と正規化は呼び出し先(proxmox-vms の kubernetes ロール)が行う。
+    # 値の検証と正規化は呼び出し先(kubernetes ロール)が行う。
     - name: ノード種別と参加先を決定する
       ansible.builtin.set_fact:
         kubernetes_is_agent: >-
@@ -136,7 +142,9 @@
       when: pv_vm_cluster_ipv4 | length > 0
 
     - name: 構築内容を表示してProxmox操作用に登録する
-      ansible.builtin.import_tasks: ../tasks/finalize_targets.yml
+      ansible.builtin.import_role:
+        name: provision
+        tasks_from: finalize_targets
 
 # テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init → 起動 → SSH待ち
 # (VM内セットアップの登録順は pv_vm_setup_order で指定済み)
@@ -168,7 +176,7 @@
 # VM内部のセットアップ。コントロールプレーン → ワーカーの順に1台ずつ実行される。
 # k3sの設定(kubernetes_node_role等)はインベントリや-eの値がそのまま渡る。
 - name: VM内部をセットアップする
-  ansible.builtin.import_playbook: ../../proxmox-vms/playbooks/kubernetes.yml
+  ansible.builtin.import_playbook: ../vms/kubernetes.yml
   vars:
     # 呼び出し先のlocalhostプレイでも参照されるため、
     # 各VMでは自分の値、localhostでは登録済みホストの先頭の値を使う

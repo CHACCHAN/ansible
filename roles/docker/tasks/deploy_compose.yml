@@ -1,5 +1,7 @@
 # ロールのテンプレート(docker-compose.yml.j2)を配置してコンテナを起動する。
-# ロールのmain.ymlから import_tasks で呼ぶ前提(テンプレートは role_path から探す)。
+# 各サービスロールのmain.ymlから import_tasks(相対パス)で呼ぶ前提。
+# import_roleにすると role_path がdockerロール側を指し、呼び出し元ロールの
+# テンプレートを見つけられなくなるため、あえてファイルパスでimportしている。
 #
 # 呼び出し側(各ロールのmain.yml)が import_tasks の vars で渡すもの:
 #   svc_name           : 表示用のサービス名(例: Authentik)

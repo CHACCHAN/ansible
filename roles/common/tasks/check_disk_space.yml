@@ -2,7 +2,7 @@
 # 途中で容量が尽きると "no space left on device" という分かりにくい失敗になるため、
 # 取得を始める前に確認して止める。
 #
-# 呼び出し側(各ロールのmain.yml)が import_tasks の vars で渡すもの:
+# 呼び出し側(各ロールのmain.yml)が import_role の vars で渡すもの:
 #   svc_name         : 表示用のサービス名(例: Authentik)
 #   svc_min_free_gb  : 必要とする空き容量(GiB)
 #   svc_min_free_var : 必要量を変更する変数の名前(エラーメッセージの案内に使う)
@@ -50,8 +50,8 @@
             and (vm_disk_device_gb | float) > ((vm_disk_total_gb | float) + 2))
         else
         'ディスク自体が小さい状態です(テンプレート素のままだと数GBしかありません)。'
-        ~ 'proxmox-hosts/playbooks/proxmox_vm_hardware.yml のresizeで拡張してください'
-        ~ '(VMの停止が必要)。proxmox/ から構築した場合は vm_hardware のresizeの'
+        ~ 'playbooks/proxmox/proxmox_vm_hardware.yml のresizeで拡張してください'
+        ~ '(VMの停止が必要)。playbooks/services/ から構築した場合は vm_hardware のresizeの'
         ~ '指定漏れを確認してください。'
       }}
 

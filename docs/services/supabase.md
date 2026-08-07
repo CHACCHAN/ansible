@@ -10,19 +10,19 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/supabase.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/supabase.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版(パスワードとAPIキーはVM内で自動生成されます)
-ansible-playbook playbooks/supabase.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/supabase.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
 
 # 公開URLを指定する(リバースプロキシ経由で使う場合)
-ansible-playbook playbooks/supabase.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/supabase.yml --ask-vault-pass -vv \
 -e "vm_ssh_password=<パスワード> supabase_public_url=https://supabase.example.com"
 
 # 手動指定版
-ansible-playbook playbooks/supabase.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/supabase.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -54,7 +54,7 @@ sudo grep -E '^(ANON_KEY|SERVICE_ROLE_KEY|DASHBOARD_PASSWORD|POSTGRES_PASSWORD)=
 - ⚠ **`.env` と `volumes/db/data` は対**です。バックアップは必ず両方まとめて取ってください
 
 ## インベントリ
-[inventory/supabase.yml](../inventory/supabase.yml) に**1台1ホスト**で書きます。
+[inventories/lab/supabase.yml](../../inventories/lab/supabase.yml) に**1台1ホスト**で書きます。
 ホスト名はVMのIPアドレスです。
 
 | 優先順位 | 指定方法 |
@@ -64,17 +64,17 @@ sudo grep -E '^(ANON_KEY|SERVICE_ROLE_KEY|DASHBOARD_PASSWORD|POSTGRES_PASSWORD)=
 | 低 | インベントリの `vars:`(グループ共通) |
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/supabase.yml](../../proxmox-vms/docs/supabase.md) —
+8. [playbooks/vms/supabase.yml](../vms/supabase.md) —
    VM内部のセットアップ、VM再起動、実行元の端末からの接続確認
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
@@ -107,8 +107,8 @@ sudo grep -E '^(ANON_KEY|SERVICE_ROLE_KEY|DASHBOARD_PASSWORD|POSTGRES_PASSWORD)=
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -126,7 +126,7 @@ sudo grep -E '^(ANON_KEY|SERVICE_ROLE_KEY|DASHBOARD_PASSWORD|POSTGRES_PASSWORD)=
 ## Supabase本体の設定
 `supabase_` で始まる変数はそのまま手順8へ渡ります。
 **`.env` に入る値はすべて変数で指定できます**(全項目の対応表は
-[proxmox-vms/docs/supabase.md](../../proxmox-vms/docs/supabase.md#指定できる項目))。
+[docs/vms/supabase.md](../vms/supabase.md#指定できる項目))。
 
 | 変数 | 既定値 | 内容 |
 | --- | --- | --- |
@@ -142,14 +142,14 @@ sudo grep -E '^(ANON_KEY|SERVICE_ROLE_KEY|DASHBOARD_PASSWORD|POSTGRES_PASSWORD)=
 
 ## 再実行・復旧
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
-- 設定を変えるだけなら `proxmox-vms/playbooks/supabase.yml` を直接実行してください
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+- 設定を変えるだけなら `playbooks/vms/supabase.yml` を直接実行してください
   (`.env` が変わったときだけコンテナを作り直します)
 - ⚠ **VMを作り直すとDBのデータも失われます。** 先に
   `/opt/supabase/supabase/docker/.env` と `volumes/db/data` をバックアップしてください
 
 ## 注意
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` を読むため)
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` を読むため)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)
 - VM内の設定は `vm_` 接頭辞で指定します。`ssh_user` や `ipv4` をそのまま `-e` で渡すと

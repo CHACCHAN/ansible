@@ -7,17 +7,17 @@
 
 ```sh
 # コントロールプレーン(1台目)
-ansible-playbook playbooks/kubernetes.yml -vv \
+ansible-playbook playbooks/vms/kubernetes.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     kubernetes_node_role=server"
 
 # ワーカー(コントロールプレーンのIPを指定するだけ。トークンは自動取得します)
-ansible-playbook playbooks/kubernetes.yml -vv \
+ansible-playbook playbooks/vms/kubernetes.yml -vv \
 -e "vm_ip=<ワーカーのIP> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     kubernetes_node_role=agent kubernetes_server_ip=<コントロールプレーンのIP>"
 
 # コントロールプレーンのログインユーザー・鍵がワーカーと違う場合
-ansible-playbook playbooks/kubernetes.yml -vv \
+ansible-playbook playbooks/vms/kubernetes.yml -vv \
 -e "vm_ip=192.168.10.71 vm_ssh_user=worker vm_ssh_prikey=~/.ssh/id_ed25519_worker \
     kubernetes_node_role=agent kubernetes_server_ip=192.168.10.70 \
     kubernetes_server_ssh_user=k3s kubernetes_server_ssh_prikey=~/.ssh/id_ed25519_k3s"
@@ -43,7 +43,7 @@ Debianのcloud imageテンプレートは素のままだと約3GBしかないた
 `proxmox/` から構築する場合は `vm_hardware` の `resize` を必ず指定してください。
 
 Proxmox側では**QEMUゲストエージェントの有効化**(`qm set <vmid> --agent enabled=1`)だけ
-行っておくと、ホストからIPが見えて扱いやすくなります(`proxmox-hosts/` の管轄)。
+行っておくと、ホストからIPが見えて扱いやすくなります(`playbooks/proxmox/` の管轄)。
 
 ## 指定できる項目
 共通オプションに加えて以下を指定できます。`kubernetes_node_role` 以外は**すべて任意です**。
@@ -118,7 +118,7 @@ Proxmox側では**QEMUゲストエージェントの有効化**(`qm set <vmid> -
 
 ```sh
 # ワーカー: 管理は192.168.10.x、クラスタ通信は10.10.10.x に分ける
-ansible-playbook playbooks/kubernetes.yml -vv \
+ansible-playbook playbooks/vms/kubernetes.yml -vv \
 -e "vm_ip=192.168.10.71 vm_ssh_user=k3s vm_ssh_prikey=~/.ssh/id_ed25519_k3s \
     kubernetes_node_role=agent \
     kubernetes_server_ip=192.168.10.70 kubernetes_server_node_ip=10.10.10.11 \
@@ -217,7 +217,7 @@ sqliteではなく**埋め込みetcd**になり、あとからコントロール
 
 ```sh
 # 2台目以降のコントロールプレーン(1台目のIPを kubernetes_server_ip に指定)
-ansible-playbook playbooks/kubernetes.yml -vv \
+ansible-playbook playbooks/vms/kubernetes.yml -vv \
 -e "vm_ip=<2台目のIP> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     kubernetes_node_role=server kubernetes_server_ip=<1台目のIP> kubernetes_cluster_init=true"
 ```

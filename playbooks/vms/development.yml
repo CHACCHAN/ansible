@@ -8,7 +8,8 @@
 
   tasks:
     - name: 対象VMをインベントリに登録して疎通を確認する
-      ansible.builtin.import_tasks: ../tasks/register-vm-host.yml
+      ansible.builtin.import_role:
+        name: vm_connect
 
 - name: 開発専用VMを構築する
   hosts: vms
@@ -20,4 +21,6 @@
   # dockerグループへの追加とカーネル更新の反映に再起動が必要
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
+      ansible.builtin.import_role:
+        name: common
+        tasks_from: reboot_vm

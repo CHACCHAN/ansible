@@ -1,12 +1,12 @@
 # proxmox_template_build.yml
 指定したノードに対してCloudInitのテンプレートを構築します。
 
-- `os_type` は `group_vars/os_defaults/<OSタイプ>.yml` から選んでください(例: debian)
+- `os_type` は `roles/proxmox_os_defaults/vars/os_defaults/<OSタイプ>.yml` から選んでください(例: debian)
 - `os_version` は下表の対応バージョンから選んでください。省略した場合は各OSの既定バージョンが使われます
 - 対応していない `os_version` を指定した場合は、対応バージョン一覧を表示して構築前に停止します
 
 ```sh
-ansible-playbook playbooks/proxmox_template_build.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_template_build.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> proxmox_storage=<Proxmoxホストのストレージ名> \
     os_type=<OSタイプ> os_version=<バージョン> \
     ssh_user=<ユーザ名> ssh_password=<パスワード> ssh_pubkey='<公開鍵>' \
@@ -46,16 +46,16 @@ ansible-playbook playbooks/proxmox_template_build.yml --ask-vault-pass -vv \
 
 ```sh
 # 例: Debian 12のテンプレートを構築する
-ansible-playbook playbooks/proxmox_template_build.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_template_build.yml --ask-vault-pass -vv \
 -e "proxmox_ip=192.168.10.11 proxmox_storage=local-lvm os_type=debian os_version=12"
 
 # 例: Ubuntuの既定バージョン(26.04)のテンプレートを構築する
-ansible-playbook playbooks/proxmox_template_build.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_template_build.yml --ask-vault-pass -vv \
 -e "proxmox_ip=192.168.10.11 proxmox_storage=local-lvm os_type=ubuntu"
 ```
 
 ## バージョンやOSを追加する
-`group_vars/os_defaults/<OSタイプ>.yml` の `versions` にエントリを足すだけで追加できます。
+`roles/proxmox_os_defaults/vars/os_defaults/<OSタイプ>.yml` の `versions` にエントリを足すだけで追加できます。
 新しいOSを追加する場合は、既存ファイルをコピーして `os_defaults_<OSタイプ>` のキー名を
 ファイル名に合わせてください(`os_type` と同じ名前である必要があります)。
 

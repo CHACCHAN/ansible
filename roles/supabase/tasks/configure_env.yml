@@ -5,6 +5,12 @@
 # 生成には公式の utils/generate-keys.sh をそのまま使う(HS256のJWTを署名するため、
 # 独自に実装せず上流のロジックに合わせる)。
 #
+# 生成スクリプトは標準入力に /dev/null を渡して実行する。
+# become付きのタスクはssh -ttでpty越しに動くため、そのまま実行すると
+# スクリプト側の `test -t 0` が成立して「Update .env file? (y/N)」の対話に入り、
+# 誰も答えられないまま無限に待ち続ける(commandモジュールにタイムアウトはない)。
+# 標準入力がttyでなければ上流は非対話モードになり、鍵を標準出力に出して終了する。
+#
 # 秘密情報を扱うタスクはno_logで出力を抑止している。
 ---
 - name: 既存の.envファイルの有無を確認する
@@ -81,8 +87,8 @@
       {{ (supabase_secrets_kept | combine(supabase_secrets_given)) | list }}
 
 - name: 公式スクリプトで秘密情報を生成する
-  ansible.builtin.command:
-    cmd: sh utils/generate-keys.sh
+  ansible.builtin.shell:
+    cmd: sh utils/generate-keys.sh < /dev/null
     chdir: "{{ supabase_project_dir }}"
   become: true
   register: supabase_keys_output
@@ -133,8 +139,8 @@
        | reject('in', supabase_secrets) | list | length) > 0
   block:
     - name: 公式スクリプトで非対称鍵を生成する
-      ansible.builtin.command:
-        cmd: sh utils/add-new-auth-keys.sh
+      ansible.builtin.shell:
+        cmd: sh utils/add-new-auth-keys.sh < /dev/null
         chdir: "{{ supabase_project_dir }}"
       become: true
       register: supabase_asym_output

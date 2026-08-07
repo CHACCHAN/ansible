@@ -42,7 +42,9 @@
 # 個別設定する運用のまま変わらない)。
 # 適用処理は proxmox_vm_cloudinit ロールと共通のタスクを使う。
 - name: Cloud-init設定を適用する
-  ansible.builtin.import_tasks: ../../../tasks/apply_cloudinit.yml
+  ansible.builtin.import_role:
+    name: proxmox_common
+    tasks_from: apply_cloudinit
   vars:
     proxmox_cloudinit_vmid: "{{ os_defaults.template_vmid }}"
 

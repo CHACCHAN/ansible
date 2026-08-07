@@ -1,5 +1,5 @@
 # os_type と os_version から、そのバージョン1つ分の定義を os_defaults にセットする。
-# group_vars/os_defaults/<os_type>.yml のトップレベル(OS共通)と versions配下
+# vars/os_defaults/<os_type>.yml のトップレベル(OS共通)と versions配下
 # (バージョンごと)をマージして、ロールが参照する平坦な形に組み立てる。
 # os_versionを省略した場合は各OSの default_version を使う。
 ---
@@ -10,12 +10,12 @@
       - (os_type | default('', true)) | length > 0
     fail_msg: >-
       os_type が指定されていません。-e "os_type=debian" のように
-      group_vars/os_defaults/ 配下のファイル名(拡張子なし)で指定してください。
+      roles/proxmox_os_defaults/vars/os_defaults/ 配下のファイル名(拡張子なし)で指定してください。
     quiet: true
 
 - name: OS定義ファイルを読み込む
   ansible.builtin.include_vars:
-    file: "{{ playbook_dir }}/../group_vars/os_defaults/{{ os_type }}.yml"
+    file: "{{ role_path }}/vars/os_defaults/{{ os_type }}.yml"
     name: os_defaults_loaded
 
 - name: 読み込んだOS定義を取り出す

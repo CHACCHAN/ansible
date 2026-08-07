@@ -7,11 +7,11 @@ Storage・Realtime・Edge Functions・ダッシュボード(Studio)が一式入�
 
 ```sh
 # 最小(パスワードとAPIキーは自動生成されます)
-ansible-playbook playbooks/supabase.yml -vv \
+ansible-playbook playbooks/vms/supabase.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名>"
 
 # 公開URLを指定する(リバースプロキシ経由で使う場合)
-ansible-playbook playbooks/supabase.yml -vv \
+ansible-playbook playbooks/vms/supabase.yml -vv \
 -e "vm_ip=172.16.11.6 vm_ssh_user=supabase vm_ssh_prikey=~/.ssh/id_ed25519_supabase \
     supabase_public_url=https://supabase.example.com \
     supabase_site_url=https://app.example.com"

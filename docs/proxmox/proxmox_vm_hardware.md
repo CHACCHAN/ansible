@@ -38,7 +38,7 @@
 
 ## 2. CPU/メモリを変更する例
 ```sh
-ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     vm_hardware={"cpu":{"cores":4,"sockets":1,"type":"host"},"memory":{"size":8192}}'
 ```
@@ -46,7 +46,7 @@ ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 ## 3. ディスクを追加しつつ、NICを追加/削除する例
 ```sh
 # ディスクを追加(新規32GB)しつつ、NIC1枚追加+NIC1を削除する
-ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     vm_hardware={"disks":[{"bus":"scsi","index":1,"storage":"local-lvm","size":32}],"network":[{"index":2,"model":"virtio","bridge":"vmbr0"}]} \
     vm_hardware_delete=["net1"]'
@@ -55,7 +55,7 @@ ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 ## 4. cpu/memory/disks/network に無いオプションを変更する例
 ```sh
 # 起動順序・QEMU Guest Agentなど、options経由で指定する
-ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> vm_id=<対象VMのVMID> \
     vm_hardware={"options":{"boot":"order=scsi0;net0","agent":1}}'
 ```
@@ -63,6 +63,6 @@ ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 ## 5. 値にスペースを含めたい場合(例: description)
 `-e` 全体をJSONにする方法が使えます:
 ```sh
-ansible-playbook playbooks/proxmox_vm_hardware.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_hardware.yml --ask-vault-pass -vv \
 -e '{"proxmox_ip":"<ProxmoxホストのIPアドレス>","vm_id":101,"vm_hardware":{"options":{"description":"my server"}}}'
 ```

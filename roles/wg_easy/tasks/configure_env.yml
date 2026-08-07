@@ -7,7 +7,9 @@
 # dockerグループのみ読み取り可(0640)にしてno_logで出力も抑止する。
 ---
 - name: 既存の.envファイルを読み込む
-  ansible.builtin.import_tasks: ../../../tasks/load_existing_env.yml
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: load_existing_env
   vars:
     svc_env_path: "{{ wg_easy_install_dir }}/.env"
 

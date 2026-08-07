@@ -6,7 +6,9 @@
   ansible.builtin.import_tasks: validate.yml
 
 - name: 接続先のノード名を取得する
-  ansible.builtin.import_tasks: ../../../tasks/detect_proxmox_node.yml
+  ansible.builtin.import_role:
+    name: proxmox_common
+    tasks_from: detect_proxmox_node
 
 - name: VMの状態を確認する
   ansible.builtin.import_tasks: check_vm_exists.yml

@@ -1,5 +1,5 @@
 # タイムゾーン(vm_timezone)・ロケール(vm_locale)・zram(vm_zram_percent)の
-# 既定値は proxmox-vms/tasks/ 配下の共通タスク側にある。
+# 既定値は roles/common・roles/docker の共通タスク側にある。
 ---
 technitium_install_dir: /opt/technitium-dns
 technitium_container_name: dns-server

@@ -36,4 +36,4 @@
       ansible.builtin.fail:
         msg: >-
           {{ vm_ip }}:22 に接続できませんでした。VMが起動していない可能性があります。
-          先にVMを起動してから再実行してください(VMの起動は proxmox-hosts/ 側の管轄です)。
+          先にVMを起動してから再実行してください(VMの起動は playbooks/proxmox/ 側の管轄です)。

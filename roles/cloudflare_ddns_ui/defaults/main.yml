@@ -1,5 +1,5 @@
 # タイムゾーン(vm_timezone)・ロケール(vm_locale)・zram(vm_zram_percent)の
-# 既定値は proxmox-vms/tasks/ 配下の共通タスク側にある。
+# 既定値は roles/common・roles/docker の共通タスク側にある。
 #
 # APIトークン・ゾーンID・更新するレコードには既定値を置かない。
 # 何を更新するかはこのplaybookの目的そのもので、既定値を持たせる意味が無いため

@@ -10,22 +10,22 @@ VM内のセットアップは**Debian 13専用**のため、既定で Debian 13 
 
 | 実行方法 | 対象 | 台数 |
 | --- | --- | --- |
-| インベントリ版(既定) | `inventory/technitium-dns.yml` のホスト。`--limit` で選択 | 1台〜全台 |
+| インベントリ版(既定) | `inventories/lab/technitium-dns.yml` のホスト。`--limit` で選択 | 1台〜全台 |
 | 手動指定版(`-e "manual=true"`) | `-e` で指定した1台 | 1台 |
 
 ```sh
 # インベントリ版: 全台 / 1台だけ
-ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
-ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass -vv -e "vm_ssh_password=<パスワード>"
+ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass -vv \
 --limit 192.168.10.53 -e "vm_ssh_password=<パスワード>"
 
 # 上位DNSへの転送と管理者パスワードまで一度に設定する
-ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass -vv --limit 192.168.10.53 \
+ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass -vv --limit 192.168.10.53 \
 -e '{"vm_ssh_password":"<パスワード>","technitium_admin_password":"<16文字以上>",
      "technitium_forwarders":["1.1.1.1","8.8.8.8"]}'
 
 # 手動指定版
-ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/services/technitium-dns.yml --ask-vault-pass -vv \
 -e 'manual=true vm_node=<ノードIP> proxmox_storage=<ストレージ名> \
     vm_id=<VMID> vm_name=<VM名> vm_ipv4=<IPv4/CIDR> vm_ipv4_gw=<ゲートウェイ> \
     vm_ssh_user=<ユーザ名> vm_ssh_password=<パスワード> \
@@ -40,7 +40,7 @@ ansible-playbook playbooks/technitium-dns.yml --ask-vault-pass -vv \
   (指定が無い場合は実行開始時に警告し、VM内の空き容量チェックで中止します)
 
 ## インベントリ
-[inventory/technitium-dns.yml](../inventory/technitium-dns.yml) に**1台1ホスト**で書きます。
+[inventories/lab/technitium-dns.yml](../../inventories/lab/technitium-dns.yml) に**1台1ホスト**で書きます。
 ホスト名はVMのIPアドレスです。
 
 **グループ名だけは `technitium_dns`(アンダースコア)です。**
@@ -53,17 +53,17 @@ Ansibleのグループ名にハイフンを使えないためで、他のplayboo
 | 低 | インベントリの `vars:`(グループ共通) |
 
 ## 実行される順番
-1. [proxmox_template_build.yml](../../proxmox-hosts/docs/proxmox_template_build.md) —
+1. [proxmox_template_build.yml](../proxmox/proxmox_template_build.md) —
    テンプレート構築。**ノードごとに1台だけが担当**します(VMID衝突を避けるため)
-2. [proxmox_vm_build.yml](../../proxmox-hosts/docs/proxmox_vm_build.md) — VMをクローン
-3. [proxmox_vm_hardware.yml](../../proxmox-hosts/docs/proxmox_vm_hardware.md) —
+2. [proxmox_vm_build.yml](../proxmox/proxmox_vm_build.md) — VMをクローン
+3. [proxmox_vm_hardware.yml](../proxmox/proxmox_vm_hardware.md) —
    ハードウェア調整(`vm_hardware` 指定時のみ)
-4. [proxmox_vm_options.yml](../../proxmox-hosts/docs/proxmox_vm_options.md) —
+4. [proxmox_vm_options.yml](../proxmox/proxmox_vm_options.md) —
    動作設定(`vm_options` 指定時のみ)
-5. [proxmox_vm_cloudinit.yml](../../proxmox-hosts/docs/proxmox_vm_cloudinit.md) — cloud-init設定
-6. [proxmox_vm_powerctl.yml](../../proxmox-hosts/docs/proxmox_vm_powerctl.md) — VMの起動
+5. [proxmox_vm_cloudinit.yml](../proxmox/proxmox_vm_cloudinit.md) — cloud-init設定
+6. [proxmox_vm_powerctl.yml](../proxmox/proxmox_vm_powerctl.md) — VMの起動
 7. SSHでログインできるまで待機(cloud-initの完了待ち)
-8. [proxmox-vms/playbooks/technitium-dns.yml](../../proxmox-vms/docs/technitium-dns.md) —
+8. [playbooks/vms/technitium-dns.yml](../vms/technitium-dns.md) —
    VM内部のセットアップ、VM再起動、実行元の端末からの接続確認
 
 手順1〜6はProxmoxノードへ、手順7〜8はVM自身へ接続します。
@@ -100,8 +100,8 @@ Ansibleのグループ名にハイフンを使えないためで、他のplayboo
 
 ## ハードウェア・動作設定の既定値
 インベントリの `vm_hardware` / `vm_options` で指定しています。書式は
-[proxmox_vm_hardware.md](../../proxmox-hosts/docs/proxmox_vm_hardware.md) /
-[proxmox_vm_options.md](../../proxmox-hosts/docs/proxmox_vm_options.md) を参照してください。
+[proxmox_vm_hardware.md](../proxmox/proxmox_vm_hardware.md) /
+[proxmox_vm_options.md](../proxmox/proxmox_vm_options.md) を参照してください。
 
 | 項目 | 既定値 | 指定 |
 | --- | --- | --- |
@@ -134,7 +134,7 @@ Ansibleのグループ名にハイフンを使えないためで、他のplayboo
 (Webコンソールの「Settings」から変更してください)。ポート番号は再実行でも変えられます。
 
 全項目とバックアップ・バージョンアップの考え方は
-[proxmox-vms/docs/technitium-dns.md](../../proxmox-vms/docs/technitium-dns.md) を参照してください。
+[docs/vms/technitium-dns.md](../vms/technitium-dns.md) を参照してください。
 パスワード類は平文でインベントリに置かず、`-e` か `ansible-vault encrypt_string` を使ってください。
 
 ## VM自身のDNS設定について
@@ -168,13 +168,13 @@ Ansibleのグループ名にハイフンを使えないためで、他のplayboo
 
 ## 再実行・復旧
 - **同じ `vm_id` での再実行はできません。** 作り直す場合は
-  `proxmox-hosts/playbooks/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
-- 構築済みVMのTechnitiumだけを更新する場合は `proxmox-vms/playbooks/technitium-dns.yml` を
+  `playbooks/proxmox/proxmox_vm_delete.yml` で削除するか、別の `vm_id` にしてください
+- 構築済みVMのTechnitiumだけを更新する場合は `playbooks/vms/technitium-dns.yml` を
   直接実行してください(設定・ゾーンと管理者パスワードは引き継がれます)
 
 ## 注意
 - 全台実行時は並行して処理されます。1台が失敗しても他はそのまま進みます
-- `--ask-vault-pass` は必須です(`proxmox-hosts/vault/secrets.yml` を読むため)
+- `--ask-vault-pass` は必須です(`vault/proxmox.yml` を読むため)
 - 手動指定版では `--limit` を使わないでください(`hosts: localhost` のプレイが
   対象外になり、構築対象が登録されません)
 - VM内の設定は `vm_` 接頭辞で指定します。`ssh_user` や `ipv4` をそのまま `-e` で渡すと

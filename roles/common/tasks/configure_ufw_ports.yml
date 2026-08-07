@@ -5,7 +5,7 @@
 # なお、Dockerが公開したポートはufwのINPUTを通らないため、ここで開けなくても
 # 外から繋がる。ufw運用のVMで設定が食い違って見えないように揃えているだけ。
 #
-# 呼び出し側(各ロールのmain.yml)が import_tasks の vars で渡すもの:
+# 呼び出し側(各ロールのmain.yml)が import_role の vars で渡すもの:
 #   svc_ufw_ports : 開放するポートのリスト。要素は {port: <番号>, proto: tcp|udp}
 #                   (公開しないポートは呼び出し側でリストから外す)
 ---

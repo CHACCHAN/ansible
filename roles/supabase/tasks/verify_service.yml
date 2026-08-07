@@ -62,9 +62,15 @@
           {{ ((supabase_bad_logs.stdout_lines | default([]))
               + (supabase_bad_logs.stderr_lines | default([])))[-20:] | join(' / ') }}
 
+# /auth/v1/health はKongのkey-authプラグイン配下にあり、鍵なしでは401になる
+# (鍵なしで通るのは verify/callback/authorize/jwks/sso だけ)。
+# anonキーはブラウザに配る公開鍵なのでヘッダに載せてよく、
+# これで「Kongが通す = ANON_KEYとJWT_SECRETが噛み合っている」ことまで確認できる。
 - name: APIゲートウェイが応答するまで待機する
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ supabase_kong_http_port }}/auth/v1/health"
+    headers:
+      apikey: "{{ supabase_secrets.ANON_KEY }}"
     status_code: [200]
   register: supabase_auth_health
   retries: 30

@@ -1,15 +1,18 @@
 # 開発専用VMを構築する。Debian専用。
-# 全VM共通の処理は proxmox-vms/tasks/ 配下(= ../../../tasks/)と共有している。
+# 全VM共通の処理は common / docker ロール(roles/common, roles/docker)と共有している。
 # vm_gui_required=true のときだけ末尾のGUI関連3つが実行される(既定falseでは入らない)。
 ---
 - name: 対象OSを確認する
-  ansible.builtin.import_tasks: ../../../tasks/assert_debian.yml
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: assert_debian
 
 - name: 必須変数を検証する
   ansible.builtin.import_tasks: validate.yml
 
 - name: VM共通の初期セットアップを実行する
-  ansible.builtin.import_tasks: ../../../tasks/setup_standard_vm.yml
+  ansible.builtin.import_role:
+    name: common
 
 - name: Cockpitを設定する
   ansible.builtin.import_tasks: configure_cockpit.yml
@@ -21,7 +24,8 @@
   ansible.builtin.import_tasks: install_cockpit_machines.yml
 
 - name: Dockerをインストールする
-  ansible.builtin.import_tasks: ../../../tasks/install_docker.yml
+  ansible.builtin.import_role:
+    name: docker
 
 - name: Cockpit Docker Managerを設定する
   ansible.builtin.import_tasks: configure_cockpit_dockermanager.yml

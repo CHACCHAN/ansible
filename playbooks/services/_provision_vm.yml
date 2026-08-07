@@ -1,7 +1,7 @@
 # テンプレート構築 → VM作成 → ハードウェア調整 → 動作設定 → cloud-init設定 →
 # 起動 → SSH接続待ち、までの全サービス共通フロー。
 # 各サービスのplaybookから import_playbook で呼ばれる前提で、単体では実行しません
-# (先に ../tasks/ の select / resolve / finalize で pv_targets の構築内容が
+# (先に provisionロールの select / resolve / finalize で pv_targets の構築内容が
 #  決まっている必要があります)。
 #
 # 対象は同じホスト名のままグループへ登録し、接続先(ansible_host)だけを切り替えます:
@@ -10,7 +10,7 @@
 ---
 # 1. cloud imageの取得とテンプレート構築(既にあれば何もしない)
 - name: テンプレートを構築する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_template_build.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_template_build.yml
   vars:
     # proxmox_ip は呼び出し先のlocalhostプレイでも参照されるため、
     # 各ホストでは自分の構築先ノード、localhostでは登録済みホストの先頭を使う
@@ -24,7 +24,7 @@
   connection: local
 
   vars_files:
-    - ../../proxmox-hosts/vault/secrets.yml
+    - ../../vault/proxmox.yml
 
   tasks:
     - name: テンプレート構築担当以外をProxmox操作用に登録する
@@ -40,7 +40,7 @@
 
 # 2. テンプレートからVMをクローンする
 - name: VMを構築する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_build.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_vm_build.yml
   vars:
     proxmox_ip: "{{ pv_proxmox_ip | default(groups['proxmox'] | first) }}"
     template_vmid: "{{ hostvars[pv_template_host].os_defaults.template_vmid }}"
@@ -48,21 +48,21 @@
 
 # 3. ハードウェア調整(クローン直後の停止中に適用される)
 - name: ハードウェア設定を変更する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_hardware.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_vm_hardware.yml
   when: (vm_hardware is defined) or (vm_hardware_delete is defined)
   vars:
     proxmox_ip: "{{ pv_proxmox_ip | default(groups['proxmox'] | first) }}"
 
 # 4. VMの動作設定(QEMUエージェント・自動起動など)
 - name: VMのオプションを変更する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_options.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_vm_options.yml
   when: (vm_options is defined) or (vm_options_delete is defined)
   vars:
     proxmox_ip: "{{ pv_proxmox_ip | default(groups['proxmox'] | first) }}"
 
 # 5. cloud-init設定(VM個別)
 - name: Cloud-initを設定する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_cloudinit.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_vm_cloudinit.yml
   vars:
     proxmox_ip: "{{ pv_proxmox_ip | default(groups['proxmox'] | first) }}"
     ssh_user: "{{ pv_vm_ssh_user }}"
@@ -80,7 +80,7 @@
 
 # 6. VMを起動する(cloud-initはこの初回起動時に適用される)
 - name: VMを起動する
-  ansible.builtin.import_playbook: ../../proxmox-hosts/playbooks/proxmox_vm_powerctl.yml
+  ansible.builtin.import_playbook: ../proxmox/proxmox_vm_powerctl.yml
   vars:
     proxmox_ip: "{{ pv_proxmox_ip | default(groups['proxmox'] | first) }}"
     power_state: "on"

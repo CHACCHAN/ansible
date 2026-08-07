@@ -4,7 +4,7 @@
 接続情報と共通オプションは [README](../README.md#全playbook共通の指定) を参照してください。
 
 ```sh
-ansible-playbook playbooks/development.yml -vv \
+ansible-playbook playbooks/vms/development.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名>"
 ```
 
@@ -69,7 +69,7 @@ polkitのパスワード入力を求められません(反映にはログイン�
 ### ネストした仮想化が必要です
 **このVM自体がProxmox上のKVMゲストのため、VM内でさらに仮想マシンを動かすには
 ホスト側でネストした仮想化を有効にする必要があります**(CPUタイプを `host` にするなど)。
-これは `proxmox-hosts/` 側の管轄で、本ロールでは行いません。
+これは `playbooks/proxmox/` 側の管轄で、本ロールでは行いません。
 
 無効のままでもインストールは成功しますが、`/dev/kvm` が無いため仮想マシンは
 TCG(ソフトウェアエミュレーション)で動作し**著しく低速**になります
@@ -123,7 +123,7 @@ ip route show default       # dev eth0 が最上位
 Windowsのリモートデスクトップ接続(mstsc)等からそのまま繋げます。
 
 ```sh
-ansible-playbook playbooks/development.yml -vv \
+ansible-playbook playbooks/vms/development.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     vm_gui_required=true"
 ```

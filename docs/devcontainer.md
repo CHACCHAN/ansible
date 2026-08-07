@@ -1,5 +1,7 @@
 # .devcontainer セットアップ手順
 
+このリポジトリをVS CodeのDev Containerで開くときの注意点です。
+
 ## Claude Code / Codex を使わない場合
 
 `devcontainer.json` の `mounts` には、デフォルトで Claude Code (`~/.claude`) と Codex (`~/.codex`) のマウント設定が**有効な状態で含まれています**。

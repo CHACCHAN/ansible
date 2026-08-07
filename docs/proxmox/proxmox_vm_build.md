@@ -3,11 +3,11 @@
 
 - 事前に `proxmox_template_build.yml` でテンプレートを構築しておいてください
 - `template_vmid` にはテンプレート構築時のVMID
-  (`group_vars/os_defaults/<OSタイプ>.yml` の `versions.<バージョン>.template_vmid`。
+  (`roles/proxmox_os_defaults/vars/os_defaults/<OSタイプ>.yml` の `versions.<バージョン>.template_vmid`。
   一覧は [proxmox_template_build.md](proxmox_template_build.md) を参照)を指定します
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_build.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_build.yml --ask-vault-pass -vv \
 -e "proxmox_ip=<ProxmoxホストのIPアドレス> template_vmid=<テンプレートのVMID> \
     vm_id=<新規VMのVMID> vm_name=<VM名> target_storage=<Proxmoxホストのストレージ名>"
 ```
@@ -22,7 +22,7 @@ ansible-playbook playbooks/proxmox_vm_build.yml --ask-vault-pass -vv \
 (先頭から順にペアとして扱われます)。
 
 ```sh
-ansible-playbook playbooks/proxmox_vm_build.yml --ask-vault-pass -vv \
+ansible-playbook playbooks/proxmox/proxmox_vm_build.yml --ask-vault-pass -vv \
 -e 'proxmox_ip=<ProxmoxホストのIPアドレス> template_vmid=<テンプレートのVMID> \
     vm_id=[100,102,103] vm_name=["web1","web2","web3"] \
     target_storage=<Proxmoxホストのストレージ名>'

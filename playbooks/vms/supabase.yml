@@ -3,7 +3,7 @@
 #
 # パスワードやAPIキーは未指定なら公式スクリプトで自動生成し、.env に保存します。
 #   -e "supabase_public_url=https://supabase.example.com" のように、
-#   環境変数に入る値はすべて変数で渡せます(docs/supabase.md の対応表を参照)。
+#   環境変数に入る値はすべて変数で渡せます(docs/vms/supabase.md の対応表を参照)。
 ---
 - name: 接続先のVMホストを登録する
   hosts: localhost
@@ -12,7 +12,8 @@
 
   tasks:
     - name: 対象VMをインベントリに登録して疎通を確認する
-      ansible.builtin.import_tasks: ../tasks/register-vm-host.yml
+      ansible.builtin.import_role:
+        name: vm_connect
 
 - name: Supabase専用VMを構築する
   hosts: vms
@@ -26,12 +27,18 @@
   # 最後に「実行元の端末から」APIとダッシュボードが見えることまで確認する。
   post_tasks:
     - name: 構成を反映するためVMを再起動する
-      ansible.builtin.import_tasks: ../tasks/reboot_vm.yml
+      ansible.builtin.import_role:
+        name: common
+        tasks_from: reboot_vm
 
-    # 11個のコンテナが順に復帰するため、再起動直後は時間がかかる
+    # 11個のコンテナが順に復帰するため、再起動直後は時間がかかる。
+    # /auth/v1/health はKongのkey-authプラグイン配下で、anonキーが無いと401になる
+    # (ロール内の同じ確認と揃えている)。VM内のset_factはこの再起動をまたいでも残る。
     - name: 実行元の端末からAPIに接続できることを確認する
       ansible.builtin.uri:
         url: "http://{{ vm_ip }}:{{ supabase_kong_http_port | default(8000) }}/auth/v1/health"
+        headers:
+          apikey: "{{ supabase_secrets.ANON_KEY }}"
         status_code: [200]
       delegate_to: localhost
       become: false

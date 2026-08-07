@@ -7,7 +7,7 @@
 接続情報と共通オプションは [README](../README.md#全playbook共通の指定) を参照してください。
 
 ```sh
-ansible-playbook playbooks/cloudflare-ddns-ui.yml -vv \
+ansible-playbook playbooks/vms/cloudflare-ddns-ui.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     cloudflare_ddns_ui_api_token=<APIトークン> \
     cloudflare_ddns_ui_zone_domain=example.com cloudflare_ddns_ui_zone_id=<ゾーンID> \

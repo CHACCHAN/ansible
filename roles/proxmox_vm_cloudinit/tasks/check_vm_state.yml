@@ -2,10 +2,14 @@
 # ここでは存在・配置ノードの確認と、電源状態の記録だけを行う。
 ---
 - name: クラスタ全体のVM一覧を取得する
-  ansible.builtin.import_tasks: ../../../tasks/get_cluster_vm_info.yml
+  ansible.builtin.import_role:
+    name: proxmox_common
+    tasks_from: get_cluster_vm_info
 
 - name: 対象VMの存在・配置ノードを確認する
-  ansible.builtin.import_tasks: ../../../tasks/find_vm_on_node.yml
+  ansible.builtin.import_role:
+    name: proxmox_common
+    tasks_from: find_vm_on_node
   vars:
     proxmox_target_vmid: "{{ vm_id }}"
 

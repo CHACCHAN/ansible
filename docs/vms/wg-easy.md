@@ -11,7 +11,7 @@ Web UI)をDocker Composeで構築します。**認証は既定でOIDC**を使い
 
 ```sh
 # OIDC(Authentik等)で認証する既定の構成
-ansible-playbook playbooks/wg-easy.yml -vv \
+ansible-playbook playbooks/vms/wg-easy.yml -vv \
 -e "vm_ip=<VMのIPアドレス> vm_ssh_user=<SSHユーザ名> vm_ssh_prikey=~/.ssh/<秘密鍵ファイル名> \
     wg_easy_init_host=vpn.example.com \
     wg_easy_oauth_oidc_server=https://auth.example.com \
@@ -19,7 +19,7 @@ ansible-playbook playbooks/wg-easy.yml -vv \
     wg_easy_oauth_oidc_client_secret=<クライアントシークレット>"
 
 # パスワード認証だけで使う(OIDCを設定しない)
-ansible-playbook playbooks/wg-easy.yml -vv \
+ansible-playbook playbooks/vms/wg-easy.yml -vv \
 -e "vm_ip=192.168.10.60 vm_ssh_user=wg vm_ssh_prikey=~/.ssh/id_ed25519_wg \
     wg_easy_init_host=vpn.example.com wg_easy_oauth_providers="
 ```
