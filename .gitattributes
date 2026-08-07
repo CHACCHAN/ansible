@@ -25,7 +25,7 @@
 # 中身は「1 行 = 16 進数の暗号文」。改行コードを変換されたり、
 # 3-way merge で行単位に書き換えられたりすると復号できなくなる。
 # 平文ではないため diff を表示しても意味がない。
-proxmox-hosts/vault/secrets.yml  -text -diff -merge
+vault/*.yml                      -text -diff -merge
 *.vault                          -text -diff -merge
 
 # --- バイナリ ---------------------------------------------------------
